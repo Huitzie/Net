@@ -9,7 +9,13 @@ export const metadata: Metadata = {
   description: 'Help us grow! Suggest a new vendor category for Venue Vendors.',
 };
 
-const SuggestCategoryPage: NextPage = () => {
+interface SuggestCategoryPageProps {
+  searchParams?: {
+    name?: string;
+  };
+}
+
+const SuggestCategoryPage: NextPage<SuggestCategoryPageProps> = ({ searchParams }) => {
   return (
     <div className="container mx-auto py-12 px-4 md:px-6">
       <div className="max-w-2xl mx-auto">
@@ -23,7 +29,7 @@ const SuggestCategoryPage: NextPage = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <SuggestCategoryForm />
+            <SuggestCategoryForm initialCategoryName={searchParams?.name} />
           </CardContent>
         </Card>
       </div>

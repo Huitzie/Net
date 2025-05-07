@@ -4,6 +4,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import React, { useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -29,17 +30,27 @@ const suggestCategoryFormSchema = z.object({
 
 type SuggestCategoryFormValues = z.infer<typeof suggestCategoryFormSchema>;
 
-export default function SuggestCategoryForm() {
+interface SuggestCategoryFormProps {
+  initialCategoryName?: string;
+}
+
+export default function SuggestCategoryForm({ initialCategoryName }: SuggestCategoryFormProps) {
   const { toast } = useToast();
   const form = useForm<SuggestCategoryFormValues>({
     resolver: zodResolver(suggestCategoryFormSchema),
     defaultValues: {
-      categoryName: "",
+      categoryName: initialCategoryName || "",
       description: "",
       reason: "",
       email: "",
     },
   });
+
+  useEffect(() => {
+    if (initialCategoryName) {
+      form.setValue("categoryName", initialCategoryName);
+    }
+  }, [initialCategoryName, form]);
 
   async function onSubmit(data: SuggestCategoryFormValues) {
     // In a real app, this would send an email or API request to an admin.
@@ -50,7 +61,7 @@ export default function SuggestCategoryForm() {
       title: "Suggestion Sent!",
       description: `Thanks for suggesting "${data.categoryName}". We'll review it shortly.`,
     });
-    form.reset(); // Reset form after submission
+    form.reset({ categoryName: "", description: "", reason: "", email: "" }); // Reset form after submission
   }
 
   return (
