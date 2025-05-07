@@ -148,13 +148,13 @@ export default function SearchForm({ initialValues }: SearchFormProps) {
               value={field.value} // Ensure value is controlled
               >
                 <FormControl>
-                  <SelectTrigger className={field.value ? "text-primary" : ""}>
+                  <SelectTrigger className="text-primary">
                     <SelectValue placeholder="Select a state" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
                   {states.map((stateName) => (
-                    <SelectItem key={stateName} value={stateName} className="text-primary">
+                    <SelectItem key={stateName} value={stateName} className="text-primary focus:text-primary hover:text-primary">
                       {stateName}
                     </SelectItem>
                   ))}
@@ -176,13 +176,13 @@ export default function SearchForm({ initialValues }: SearchFormProps) {
                 disabled={!selectedState || cities.length === 0}
               >
                 <FormControl>
-                  <SelectTrigger className={field.value ? "text-primary" : ""}>
+                  <SelectTrigger className="text-primary">
                     <SelectValue placeholder="Select a city" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
                   {cities.map((cityObj) => (
-                    <SelectItem key={cityObj.city} value={cityObj.city} className="text-primary">
+                    <SelectItem key={cityObj.city} value={cityObj.city} className="text-primary focus:text-primary hover:text-primary">
                       {cityObj.city}
                     </SelectItem>
                   ))}
@@ -200,14 +200,14 @@ export default function SearchForm({ initialValues }: SearchFormProps) {
               <FormLabel>Category</FormLabel>
               <Select onValueChange={field.onChange} value={field.value || ALL_CATEGORIES_VALUE}>
                 <FormControl>
-                  <SelectTrigger className={(field.value && field.value !== ALL_CATEGORIES_VALUE) ? "text-primary" : ""}>
+                  <SelectTrigger className="text-primary">
                     <SelectValue placeholder="Select a category (optional)" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value={ALL_CATEGORIES_VALUE} className="text-primary">All Categories</SelectItem>
+                  <SelectItem value={ALL_CATEGORIES_VALUE} className="text-primary focus:text-primary hover:text-primary">All Categories</SelectItem>
                   {allCategories.map((category) => (
-                    <SelectItem key={category.id} value={category.id} className="text-primary">
+                    <SelectItem key={category.id} value={category.id} className="text-primary focus:text-primary hover:text-primary">
                       {category.name}
                     </SelectItem>
                   ))}
