@@ -53,7 +53,7 @@ export default function SearchForm({ initialValues }: SearchFormProps) {
     defaultValues: {
       state: initialValues?.state || "",
       city: initialValues?.city || "",
-      category: initialValues?.category || "", // If initial is "" placeholder shows, if initial is ALL_CATEGORIES_VALUE, "All Categories" shows
+      category: initialValues?.category || ALL_CATEGORIES_VALUE, 
       keyword: initialValues?.keyword || "",
     },
   });
@@ -162,7 +162,7 @@ export default function SearchForm({ initialValues }: SearchFormProps) {
                 </FormControl>
                 <SelectContent>
                   {states.map((stateName) => (
-                    <SelectItem key={stateName} value={stateName}>
+                    <SelectItem key={stateName} value={stateName} className="text-primary">
                       {stateName}
                     </SelectItem>
                   ))}
@@ -190,7 +190,7 @@ export default function SearchForm({ initialValues }: SearchFormProps) {
                 </FormControl>
                 <SelectContent>
                   {cities.map((cityObj) => (
-                    <SelectItem key={cityObj.city} value={cityObj.city}>
+                    <SelectItem key={cityObj.city} value={cityObj.city} className="text-primary">
                       {cityObj.city}
                     </SelectItem>
                   ))}
@@ -213,9 +213,9 @@ export default function SearchForm({ initialValues }: SearchFormProps) {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value={ALL_CATEGORIES_VALUE}>All Categories</SelectItem>
+                  <SelectItem value={ALL_CATEGORIES_VALUE} className="text-primary">All Categories</SelectItem>
                   {allCategories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
+                    <SelectItem key={category.id} value={category.id} className="text-primary">
                       {category.name}
                     </SelectItem>
                   ))}
