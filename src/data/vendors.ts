@@ -1,5 +1,6 @@
 
 import type { Vendor } from '@/types';
+import { categories as allCategoriesList } from '@/data/categories';
 
 export const vendors: Vendor[] = [
   {
@@ -214,6 +215,122 @@ export const vendors: Vendor[] = [
         priceRange: '$2,500 - $4,000'
       }
     ]
+  },
+   {
+    id: '9',
+    name: 'Elegant Events Decor',
+    slug: 'elegant-events-decor',
+    tagline: 'Transforming Spaces, Creating Memories.',
+    description: 'Specializing in unique and stylish event decor, from floral arrangements to custom lighting and themed props. We work closely with you to bring your vision to life.',
+    state: 'California',
+    city: 'San Francisco',
+    categories: ['Florists', 'Event Lighting', 'Decor Rentals'],
+    profileImage: 'https://picsum.photos/seed/decor1/400/300',
+    bannerImage: 'https://picsum.photos/seed/decor1banner/1200/400',
+    rating: 4.7,
+    reviewsCount: 65,
+    contactEmail: 'contact@elegantevents.example.com',
+    phoneNumber: '555-0102',
+    website: 'https://elegantevents.example.com',
+    services: [
+      {
+        id: 's9-1',
+        name: 'Full Event Design & Decor',
+        description: 'Comprehensive decor package including consultation, mood board creation, floral design, lighting, and on-site setup and takedown.',
+        category: 'Decor Rentals',
+        photos: ['https://picsum.photos/seed/decorservice1/600/400', 'https://picsum.photos/seed/decorservice2/600/400'],
+        priceRange: 'Starting at $2,000'
+      },
+      {
+        id: 's9-2',
+        name: 'Custom Floral Centerpieces',
+        description: 'Beautifully crafted floral centerpieces tailored to your event theme and color palette. Various sizes and styles available.',
+        category: 'Florists',
+        photos: ['https://picsum.photos/seed/floralservice1/600/400'],
+        priceRange: '$75 - $300 per centerpiece'
+      }
+    ]
+  },
+  {
+    id: '10',
+    name: 'DJ Sparkle Sounds',
+    slug: 'dj-sparkle-sounds',
+    tagline: 'Keeping the Party Alive!',
+    description: 'Professional DJ services for weddings, parties, corporate events, and more. Extensive music library covering all genres, and top-of-the-line sound equipment.',
+    state: 'New York',
+    city: 'Brooklyn',
+    categories: ['DJs', 'Audio/Visual Rentals'],
+    profileImage: 'https://picsum.photos/seed/dj1/400/300',
+    bannerImage: 'https://picsum.photos/seed/dj1banner/1200/400',
+    rating: 4.9,
+    reviewsCount: 110,
+    contactEmail: 'bookings@sparklesounds.example.com',
+    services: [
+      {
+        id: 's10-1',
+        name: 'Wedding DJ Package',
+        description: 'Includes up to 5 hours of DJ service, MC duties, professional sound system, dance floor lighting, and consultation.',
+        category: 'DJs',
+        photos: ['https://picsum.photos/seed/djservice1/600/400'],
+        priceRange: '$800 - $1500'
+      },
+      {
+        id: 's10-2',
+        name: 'Corporate Event Sound & Music',
+        description: 'Sound system rental, background music, and DJ services for corporate functions, conferences, and holiday parties.',
+        category: 'Audio/Visual Rentals',
+        photos: ['https://picsum.photos/seed/corpsound1/600/400'],
+        priceRange: 'Custom Quote'
+      }
+    ]
+  },
+  {
+    id: '11',
+    name: 'Gourmet Catering Co.',
+    slug: 'gourmet-catering-co',
+    tagline: 'Exquisite Food for Every Occasion.',
+    description: 'Full-service catering company offering a diverse range of cuisines, from buffet style to plated dinners. We focus on fresh, locally-sourced ingredients.',
+    state: 'Illinois',
+    city: 'Chicago',
+    categories: ['Caterers', 'Food Trucks (General)'], // Example: might also have a food truck
+    profileImage: 'https://picsum.photos/seed/catering1/400/300',
+    bannerImage: 'https://picsum.photos/seed/cateringbanner1/1200/400',
+    rating: 4.8,
+    reviewsCount: 92,
+    contactEmail: 'events@gourmetcatering.example.com',
+    services: [
+      {
+        id: 's11-1',
+        name: 'Buffet Style Catering',
+        description: 'Customizable buffet menu with a wide selection of appetizers, main courses, sides, and desserts. Includes setup and serving staff.',
+        category: 'Caterers',
+        photos: ['https://picsum.photos/seed/buffet1/600/400', 'https://picsum.photos/seed/buffet2/600/400'],
+        priceRange: '$40 - $75 per person'
+      }
+    ]
+  },
+  {
+    id: '12',
+    name: 'Rustic Charm Rentals',
+    slug: 'rustic-charm-rentals',
+    tagline: 'Vintage and Rustic Event Furnishings.',
+    description: 'Unique collection of rustic and vintage furniture, props, and decor items for weddings and events. From farm tables to antique sofas.',
+    state: 'Texas',
+    city: 'Dallas',
+    categories: ['Party Rentals (Tables, Chairs, Linens)', 'Decor Rentals'],
+    profileImage: 'https://picsum.photos/seed/rustic1/400/300',
+    rating: 4.6,
+    reviewsCount: 55,
+    services: [
+      {
+        id: 's12-1',
+        name: 'Farm Table & Bench Rental',
+        description: 'Handcrafted wooden farm tables (8ft) with matching benches. Perfect for rustic or bohemian themed events.',
+        category: 'Party Rentals (Tables, Chairs, Linens)',
+        photos: ['https://picsum.photos/seed/farmtable1/600/400'],
+        priceRange: '$150 per table/bench set'
+      }
+    ]
   }
 ];
 
@@ -230,13 +347,20 @@ export const getVendorsByLocationAndCategory = (state: string, city: string, cat
     vendor.state.toLowerCase() === state.toLowerCase() && 
     vendor.city.toLowerCase() === city.toLowerCase() &&
     vendor.categories.some(catName => {
-      const category = categories.find(c => c.name === catName);
+      const category = allCategoriesList.find(c => c.name === catName);
       return category?.id === categoryId;
     })
-  );
+  ).slice(0, 10); // Limit to 10 results
 };
 
-export const searchVendors = (filters: { state?: string; city?: string; categoryId?: string }): Vendor[] => {
+interface SearchFilters {
+  state?: string;
+  city?: string;
+  categoryId?: string;
+  keyword?: string; // Added keyword filter
+}
+
+export const searchVendors = (filters: SearchFilters): Vendor[] => {
   let filteredVendors = vendors;
 
   if (filters.state) {
@@ -248,28 +372,24 @@ export const searchVendors = (filters: { state?: string; city?: string; category
   if (filters.categoryId) {
     filteredVendors = filteredVendors.filter(v => 
       v.categories.some(catName => {
-        const category = categories.find(c => c.name === catName);
+        // Ensure allCategoriesList is used here for consistency
+        const category = allCategoriesList.find(c => c.name === catName); 
         return category?.id === filters.categoryId;
       })
     );
   }
-  return filteredVendors;
+  if (filters.keyword) {
+    const keywordLower = filters.keyword.toLowerCase();
+    filteredVendors = filteredVendors.filter(v => 
+      v.name.toLowerCase().includes(keywordLower) ||
+      v.description.toLowerCase().includes(keywordLower) ||
+      (v.tagline && v.tagline.toLowerCase().includes(keywordLower)) ||
+      v.categories.some(cat => cat.toLowerCase().includes(keywordLower)) ||
+      v.services.some(service => 
+        service.name.toLowerCase().includes(keywordLower) ||
+        service.description.toLowerCase().includes(keywordLower)
+      )
+    );
+  }
+  return filteredVendors.slice(0, 10); // Limit to 10 results
 };
-
-
-// Need to import categories from categories.ts if this file is split.
-// For now, assuming it's in the same context or categories data is available.
-const categories = [
-  { id: 'taco-trucks', name: 'Taco Trucks' },
-  { id: 'caterers', name: 'Caterers' },
-  { id: 'food-trucks', name: 'Food Trucks (General)' },
-  { id: 'jump-houses', name: 'Jump Houses & Inflatables' },
-  { id: 'party-rentals', name: 'Party Rentals (Tables, Chairs, Linens)' },
-  { id: 'mobile-bartenders', name: 'Mobile Bartenders' },
-  { id: 'cake-makers', name: 'Cake Makers' },
-  { id: 'cupcake-bakers', name: 'Cupcake Bakers' },
-  { id: 'venues', name: 'Venues' },
-  { id: 'photo-booths', name: 'Photo Booths' },
-  { id: 'wedding-planners', name: 'Wedding Planners' },
-  { id: 'bands', name: 'Bands' },
-]; // Simplified version for this file context

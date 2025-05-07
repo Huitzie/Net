@@ -3,12 +3,14 @@ import type { NextPage, Metadata } from 'next';
 import { Suspense } from 'react';
 import SearchForm from '@/components/search/search-form';
 import VendorCard from '@/components/vendors/vendor-card';
-import { searchVendors } from '@/data/vendors'; // Assuming this function exists and is updated
+import { searchVendors as performSearchVendors } from '@/data/vendors'; 
 import { getCategoryById } from '@/data/categories';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, Share2, Sparkles } from 'lucide-react';
+import { AlertTriangle, Share2, Sparkles, Info } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
 
 export const metadata: Metadata = {
   title: 'Search Vendors | Venue Vendors',
@@ -27,7 +29,6 @@ interface SearchPageProps {
 const SearchResults = async ({ searchParams }: SearchPageProps) => {
   const { state, city, category: categoryId, keyword } = searchParams;
 
-  // Basic validation: require state and city for a meaningful search
   if (!state || !city) {
     return (
       <div className="text-center py-10">
@@ -38,7 +39,11 @@ const SearchResults = async ({ searchParams }: SearchPageProps) => {
     );
   }
   
-  const vendors = await searchVendors({ state, city, categoryId, keyword });
+  // Perform search without initial limit to check total count
+  const allMatchingVendors = await performSearchVendors({ state, city, categoryId, keyword });
+  const vendors = allMatchingVendors.slice(0, 10); // Then take the first 10 for display
+  const totalFound = allMatchingVendors.length;
+
   const category = categoryId ? getCategoryById(categoryId) : null;
 
   if (vendors.length === 0) {
@@ -88,9 +93,18 @@ const SearchResults = async ({ searchParams }: SearchPageProps) => {
   return (
     <div>
       <h2 className="text-2xl font-semibold mb-6">
-        Showing {category ? `${category.name} ` : ''}Vendors in {city}, {state}
+        Showing {vendors.length > 1 ? `${vendors.length} ` : ''}{category ? `${category.name} ` : ''}Vendors in {city}, {state}
         {keyword && ` matching "${keyword}"`}
       </h2>
+      {totalFound > 10 && (
+        <Alert className="mb-6">
+          <Info className="h-4 w-4" />
+          <AlertTitle>More Results Available</AlertTitle>
+          <AlertDescription>
+            We found {totalFound} vendors matching your criteria. Displaying the top 10. Future updates may include pagination to view all results.
+          </AlertDescription>
+        </Alert>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {vendors.map((vendor) => (
           <VendorCard key={vendor.id} vendor={vendor} />
