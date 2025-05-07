@@ -33,7 +33,7 @@ const ALL_CATEGORIES_VALUE = "_all_categories_";
 const searchFormSchema = z.object({
   state: z.string().min(1, "State is required."),
   city: z.string().min(1, "City is required."),
-  category: z.string().optional().default(ALL_CATEGORIES_VALUE), // Ensure default is set
+  category: z.string().optional().default(ALL_CATEGORIES_VALUE), 
   keyword: z.string().optional(),
 });
 
@@ -76,32 +76,24 @@ export default function SearchForm({ initialValues }: SearchFormProps) {
       if (selectedState) {
         const fetchedCities = await getCitiesByState(selectedState);
         setCities(fetchedCities);
-        // Check if initialValues.city is present and is among the fetched cities
+        
         const currentFormCity = form.getValues("city");
         const initialCityExistsInNewList = initialValues?.city && fetchedCities.some(c => c.city === initialValues.city);
 
         if (initialValues?.city && initialCityExistsInNewList) {
-            // If there's an initial city and it's valid for the new state, set it.
-             if (currentFormCity !== initialValues.city) { // Only set if different to avoid loop if initialValues itself causes re-render
+             if (currentFormCity !== initialValues.city) { 
                 form.setValue("city", initialValues.city);
             }
         } else if (initialValues?.city && !initialCityExistsInNewList && selectedState === initialValues.state) {
-            // If there was an initial city for the same state, but it's no longer valid (e.g. data changed),
-            // and the current form city is that invalid initial city, reset it to allow placeholder or new selection.
             if (currentFormCity === initialValues.city) {
                  form.setValue("city", "");
             }
         } else if (!initialValues?.city && currentFormCity && !fetchedCities.some(c => c.city === currentFormCity)) {
-            // If there was no initial city, but the form has a city selected that's not in the new list, reset.
             form.setValue("city", "");
-        } else if (fetchedCities.length > 0 && currentFormCity === "" && !initialValues?.city) {
-            // If cities are loaded, form city is empty, and there was no initial city, do nothing (let placeholder show)
         }
-
-
       } else {
         setCities([]);
-         if (form.getValues("city") !== "") { // Only reset if not already empty
+         if (form.getValues("city") !== "") { 
             form.setValue("city", ""); 
         }
       }
@@ -110,7 +102,6 @@ export default function SearchForm({ initialValues }: SearchFormProps) {
         fetchCities();
     } else {
         setCities([]);
-        // If state is cleared, clear city unless it was an initial value we want to preserve until state is selected
         if (!initialValues?.city || initialValues?.state !== selectedState ) {
            if (form.getValues("city") !== "") {
              form.setValue("city", "");
@@ -127,7 +118,7 @@ export default function SearchForm({ initialValues }: SearchFormProps) {
     if (data.city) params.append("city", data.city);
     
     let categoryToQuery = data.category;
-    if (categoryToQuery === ALL_CATEGORIES_VALUE || !categoryToQuery) { // Check for undefined/empty as well
+    if (categoryToQuery === ALL_CATEGORIES_VALUE || !categoryToQuery) {
       // Do not append category if it's the "all" value or empty/undefined
     } else {
       params.append("category", categoryToQuery);
@@ -148,17 +139,17 @@ export default function SearchForm({ initialValues }: SearchFormProps) {
               <FormLabel>State</FormLabel>
               <Select onValueChange={ (value) => {
                 field.onChange(value);
-                // If changing state, and current city was from initialValues but for a different state, clear it.
                 if (initialValues?.state && value !== initialValues.state && initialValues.city === form.getValues().city) {
                   form.setValue('city', '');
                 } else if (!initialValues?.state && form.getValues().city && cities.length > 0 && !cities.find(c => c.city === form.getValues().city)) {
-                  // Or if no initial state, and current city is not in the new list of cities, clear it.
                    form.setValue('city', '');
                 }
-              }} defaultValue={field.value}>
+              }} 
+              value={field.value} // Ensure value is controlled
+              >
                 <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a state" className="text-primary" />
+                  <SelectTrigger className={field.value ? "text-primary" : ""}>
+                    <SelectValue placeholder="Select a state" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
@@ -181,12 +172,12 @@ export default function SearchForm({ initialValues }: SearchFormProps) {
               <FormLabel>City</FormLabel>
               <Select 
                 onValueChange={field.onChange} 
-                value={field.value} // Controlled component
+                value={field.value} 
                 disabled={!selectedState || cities.length === 0}
               >
                 <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a city" className="text-primary"/>
+                  <SelectTrigger className={field.value ? "text-primary" : ""}>
+                    <SelectValue placeholder="Select a city" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
@@ -209,8 +200,8 @@ export default function SearchForm({ initialValues }: SearchFormProps) {
               <FormLabel>Category</FormLabel>
               <Select onValueChange={field.onChange} value={field.value || ALL_CATEGORIES_VALUE}>
                 <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a category (optional)" className="text-primary"/>
+                  <SelectTrigger className={(field.value && field.value !== ALL_CATEGORIES_VALUE) ? "text-primary" : ""}>
+                    <SelectValue placeholder="Select a category (optional)" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
@@ -227,22 +218,6 @@ export default function SearchForm({ initialValues }: SearchFormProps) {
           )}
         />
         
-        {/* Keyword search can be added here if needed for a more detailed search page
-        <FormField
-          control={form.control}
-          name="keyword"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Keyword (optional)</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., rustic, DJ, gluten-free" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        */}
-
         <Button type="submit" className="w-full lg:col-span-1 md:col-span-2 col-span-1 bg-accent hover:bg-accent/90">
           <Search className="mr-2 h-4 w-4" /> Search Vendors
         </Button>
@@ -251,3 +226,4 @@ export default function SearchForm({ initialValues }: SearchFormProps) {
   );
 }
 
+    

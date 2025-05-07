@@ -1,3 +1,4 @@
+
 "use client";
 import Link from 'next/link';
 import { siteConfig, type NavItem } from '@/config/site';
@@ -55,7 +56,7 @@ const Header = () => {
   
   const renderAuthButtons = () => (
     <div className="hidden md:flex items-center space-x-2">
-      <Button variant="ghost" asChild className="text-header-foreground hover:bg-primary-foreground/10">
+      <Button variant="ghost" asChild className="text-header-foreground hover:bg-primary-foreground/10 hover:text-primary">
         <Link href="/login">Log In</Link>
       </Button>
       <Button variant="secondary" asChild className="bg-accent text-accent-foreground hover:bg-accent/90">
@@ -111,7 +112,7 @@ const Header = () => {
                   {item.title}
                 </Link>
               ))}
-              <Button onClick={() => { logout(); setIsMobileMenuOpen(false); }} variant="ghost" className="w-full justify-start text-lg font-medium flex items-center gap-2">
+              <Button onClick={() => { logout(); setIsMobileMenuOpen(false); }} variant="ghost" className="w-full justify-start text-lg font-medium flex items-center gap-2 text-foreground hover:text-primary">
                 <LogOut className="h-5 w-5" /> Log out
               </Button>
             </>
@@ -137,17 +138,19 @@ const Header = () => {
             <Sparkles className="h-8 w-8 text-accent" />
             <span className="font-bold text-2xl tracking-tight">{siteConfig.name}</span>
           </Link>
-          <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
+          <nav className="hidden md:flex items-center space-x-1 text-sm font-medium">
             {siteConfig.mainNav.map((item: NavItem) => (
-              <Link key={item.href} href={item.href} className="hover:text-accent transition-colors">
-                {item.title}
-              </Link>
+              <Button asChild variant="ghost" className="text-header-foreground hover:bg-primary-foreground/10 hover:text-primary" key={item.href}>
+                <Link href={item.href}>
+                  {item.title}
+                </Link>
+              </Button>
             ))}
           </nav>
         </div>
 
         <div className="flex items-center space-x-2">
-          <Button variant="ghost" size="icon" asChild className="text-header-foreground hover:bg-primary-foreground/10 hidden md:inline-flex">
+          <Button variant="ghost" size="icon" asChild className="text-header-foreground hover:bg-primary-foreground/10 hover:text-primary hidden md:inline-flex">
             <Link href="/search">
               <Search className="h-5 w-5" />
               <span className="sr-only">Search</span>
@@ -162,3 +165,5 @@ const Header = () => {
 };
 
 export default Header;
+
+    
