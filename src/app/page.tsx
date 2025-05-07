@@ -13,7 +13,7 @@ export default function HomePage() {
   return (
     <div className="flex flex-col items-center">
       {/* Hero Section */}
-      <section className="w-full py-20 md:py-32 bg-gradient-to-br from-primary to-purple-700 text-primary-foreground relative overflow-hidden">
+      <section className="w-full py-20 md:py-32 bg-gradient-to-br from-primary to-[hsl(var(--primary-dark))] text-primary-foreground relative overflow-hidden">
         <div className="absolute inset-0 opacity-10">
            <Image src="https://picsum.photos/seed/partyhero/1920/1080" alt="Party background" layout="fill" objectFit="cover" data-ai-hint="event celebration" />
         </div>

@@ -12,6 +12,7 @@
     --popover-foreground: 300 25% 20%;
     --primary: 300 100% 25.1%; /* Purple */
     --primary-foreground: 0 0% 100%; /* White */
+    --primary-dark: 300 100% 20.1%; /* Darker Purple */
     --secondary: 0 0% 83%; /* Soft Gray */
     --secondary-foreground: 300 100% 25.1%; /* Purple */
     --muted: 240 30% 92%; /* Lighter Lavender */
@@ -43,6 +44,7 @@
     --popover-foreground: 240 30% 92%;
     --primary: 300 80% 65%; /* Lighter Purple for dark mode */
     --primary-foreground: 300 10% 10%; /* Dark Purple text */
+    --primary-dark: 300 80% 55%; /* Darker shade of dark mode primary */
     --secondary: 300 10% 25%; /* Darker Gray/Purple */
     --secondary-foreground: 240 30% 92%;
     --muted: 300 10% 20%;
