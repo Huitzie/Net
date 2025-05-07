@@ -3,6 +3,7 @@ import type {Metadata} from 'next';
 import { Poppins } from 'next/font/google';
 import './globals.css';
 import Header from '@/components/layout/header';
+import Footer from '@/components/layout/footer'; // Added import
 import { Toaster } from '@/components/ui/toaster';
 import { Providers } from '@/components/providers';
 
@@ -25,15 +26,17 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${poppins.variable} font-sans antialiased`}>
+      <body className={`${poppins.variable} font-sans antialiased flex flex-col min-h-screen`}>
         <Providers>
           <Header />
           <main className="flex-1">
             {children}
           </main>
+          <Footer /> {/* Added Footer component */}
           <Toaster />
         </Providers>
       </body>
     </html>
   );
 }
+

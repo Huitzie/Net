@@ -65,13 +65,14 @@
   * {
     @apply border-border;
   }
+  html {
+    @apply h-full;
+  }
   body {
     @apply bg-background text-foreground;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
+    @apply flex flex-col min-h-full; /* Ensures body takes full height and enables flex for footer */
   }
   main {
-    flex-grow: 1;
+    @apply flex-grow; /* Allows main content to expand and push footer down */
   }
 }
