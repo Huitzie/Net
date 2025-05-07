@@ -14,8 +14,15 @@ export default function HomePage() {
     <div className="flex flex-col items-center">
       {/* Hero Section */}
       <section className="w-full py-20 md:py-32 bg-gradient-to-br from-primary to-[hsl(var(--primary-dark))] text-primary-foreground relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-           <Image src="https://picsum.photos/seed/partycrowd/1920/1080" alt="Party background" layout="fill" objectFit="cover" data-ai-hint="party crowd" />
+        <div className="absolute inset-0 opacity-20">
+           <Image 
+            src="https://picsum.photos/seed/partyfood/1920/1080" 
+            alt="Catering food platters at a party" 
+            layout="fill" 
+            objectFit="cover" 
+            data-ai-hint="party food" 
+            priority
+           />
         </div>
         <div className="container mx-auto px-4 md:px-6 text-center relative z-10">
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
