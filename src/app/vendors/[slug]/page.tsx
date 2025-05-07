@@ -1,0 +1,165 @@
+
+import type { NextPage, Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import Image from 'next/image';
+import { getVendorBySlug, vendors as allVendors } from '@/data/vendors';
+import type { Service } from '@/types';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Heart, MapPin, Star, Phone, Mail, Globe, Users, Eye, MessageSquare } from 'lucide-react';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import VendorServiceCard from '@/components/vendors/vendor-service-card';
+import { Separator } from '@/components/ui/separator';
+
+interface VendorPageProps {
+  params: {
+    slug: string;
+  };
+}
+
+export async function generateStaticParams() {
+  return allVendors.map((vendor) => ({
+    slug: vendor.slug,
+  }));
+}
+
+export async function generateMetadata({ params }: VendorPageProps): Promise<Metadata> {
+  const vendor = getVendorBySlug(params.slug);
+  if (!vendor) {
+    return {
+      title: 'Vendor Not Found',
+    };
+  }
+  return {
+    title: `${vendor.name} | Venue Vendors`,
+    description: vendor.description.substring(0, 150) + '...' || `Services offered by ${vendor.name} in ${vendor.city}, ${vendor.state}.`,
+  };
+}
+
+const VendorPage: NextPage<VendorPageProps> = ({ params }) => {
+  const vendor = getVendorBySlug(params.slug);
+
+  if (!vendor) {
+    notFound();
+  }
+
+  return (
+    <div className="container mx-auto py-8 px-4 md:px-6">
+      {/* Banner Image */}
+      {vendor.bannerImage && (
+        <div className="relative w-full h-64 md:h-96 rounded-lg overflow-hidden mb-8 shadow-lg">
+          <Image 
+            src={vendor.bannerImage} 
+            alt={`${vendor.name} banner`} 
+            layout="fill" 
+            objectFit="cover" 
+            priority
+            data-ai-hint="vendor event setup" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left Column: Vendor Info */}
+        <div className="lg:col-span-1 space-y-6">
+          <Card className="overflow-hidden shadow-lg">
+            <div className="relative w-full h-56 sm:h-72">
+              <Image 
+                src={vendor.profileImage} 
+                alt={vendor.name} 
+                layout="fill" 
+                objectFit="cover"
+                data-ai-hint="vendor portrait"
+              />
+            </div>
+            <CardHeader>
+              <CardTitle className="text-3xl font-bold">{vendor.name}</CardTitle>
+              {vendor.tagline && <CardDescription className="text-lg text-muted-foreground">{vendor.tagline}</CardDescription>}
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center text-muted-foreground">
+                <MapPin className="h-5 w-5 mr-3 shrink-0 text-primary" />
+                <span>{vendor.city}, {vendor.state}</span>
+              </div>
+              {vendor.rating && (
+                <div className="flex items-center">
+                  <Star className="h-5 w-5 mr-2 text-yellow-400 fill-yellow-400" />
+                  <span className="font-semibold">{vendor.rating.toFixed(1)}</span>
+                  <span className="ml-1 text-muted-foreground">({vendor.reviewsCount || 0} reviews)</span>
+                </div>
+              )}
+              <div className="flex flex-wrap gap-2 pt-2">
+                {vendor.categories.map(catName => (
+                  <Badge key={catName} variant="secondary">{catName}</Badge>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-xl">Contact Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {vendor.contactEmail && (
+                <div className="flex items-center">
+                  <Mail className="h-4 w-4 mr-2 shrink-0 text-primary" />
+                  <a href={`mailto:${vendor.contactEmail}`} className="hover:underline">{vendor.contactEmail}</a>
+                </div>
+              )}
+              {vendor.phoneNumber && (
+                <div className="flex items-center">
+                  <Phone className="h-4 w-4 mr-2 shrink-0 text-primary" />
+                  <span>{vendor.phoneNumber}</span>
+                </div>
+              )}
+              {vendor.website && (
+                <div className="flex items-center">
+                  <Globe className="h-4 w-4 mr-2 shrink-0 text-primary" />
+                  <a href={vendor.website} target="_blank" rel="noopener noreferrer" className="hover:underline truncate">{vendor.website}</a>
+                </div>
+              )}
+              <Button className="w-full mt-4 bg-accent hover:bg-accent/90">
+                <MessageSquare className="mr-2 h-4 w-4" /> Request a Quote
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Column: About & Services */}
+        <div className="lg:col-span-2 space-y-8">
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-2xl">About {vendor.name}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-foreground/80 whitespace-pre-line">{vendor.description}</p>
+            </CardContent>
+          </Card>
+
+          <div>
+            <h2 className="text-2xl font-bold mb-6">Services Offered</h2>
+            {vendor.services && vendor.services.length > 0 ? (
+              <div className="space-y-6">
+                {vendor.services.map((service: Service) => (
+                  <VendorServiceCard key={service.id} service={service} vendorId={vendor.id} />
+                ))}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="py-10 text-center">
+                  <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">This vendor has not listed any specific services yet.</p>
+                  <p className="text-sm text-muted-foreground">Contact them directly for more information.</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default VendorPage;
