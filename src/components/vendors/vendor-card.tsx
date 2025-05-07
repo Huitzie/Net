@@ -4,8 +4,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Star, Users } from 'lucide-react';
+import { MapPin, Users } from 'lucide-react'; // Removed Star, will use StarRating
 import { getCategoryByName } from '@/data/categories';
+import StarRating from '@/components/ui/star-rating'; // Added StarRating import
 
 interface VendorCardProps {
   vendor: Vendor;
@@ -44,10 +45,12 @@ const VendorCard: React.FC<VendorCardProps> = ({ vendor }) => {
                 <span>{primaryCategory.name}</span>
               </div>
             )}
-            {vendor.rating && (
+            {typeof vendor.rating === 'number' && ( // Check if rating is a number
               <div className="flex items-center">
-                <Star className="h-4 w-4 mr-1 text-yellow-400 fill-yellow-400" />
-                <span>{vendor.rating.toFixed(1)} ({vendor.reviewsCount || 0} reviews)</span>
+                <StarRating rating={vendor.rating} size={16} starClassName="mr-0.5" />
+                <span className="ml-1.5 text-xs text-muted-foreground">
+                  ({vendor.reviewsCount || 0} {vendor.reviewsCount === 1 ? 'review' : 'reviews'})
+                </span>
               </div>
             )}
           </CardContent>

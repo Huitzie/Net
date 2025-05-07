@@ -36,6 +36,11 @@ export const vendors: Vendor[] = [
         photos: ['https://picsum.photos/seed/tacoservice3/600/400'],
         priceRange: '$25 - $35 per person'
       }
+    ],
+    reviews: [
+      { id: 'r1-1', author: 'Maria G.', rating: 5, comment: 'Best tacos I\'ve had for an event! Everyone loved them.', date: '2024-07-15', avatar: 'https://avatar.vercel.sh/maria.png?size=40' },
+      { id: 'r1-2', author: 'John B.', rating: 4.5, comment: 'Great service and delicious food. The al pastor was amazing.', date: '2024-06-28', avatar: 'https://avatar.vercel.sh/john.png?size=40' },
+      { id: 'r1-3', author: 'Lisa K.', rating: 4, comment: 'Good tacos, a bit pricey but worth it for the convenience.', date: '2024-05-10' }
     ]
   },
   {
@@ -69,6 +74,10 @@ export const vendors: Vendor[] = [
         photos: ['https://picsum.photos/seed/partyservice1/600/400'],
         priceRange: '$200 + delivery'
       }
+    ],
+    reviews: [
+      { id: 'r2-1', author: 'Sarah P.', rating: 5, comment: 'Kids had a blast! The bounce house was clean and the setup crew was professional.', date: '2024-07-20', avatar: 'https://avatar.vercel.sh/sarah.png?size=40' },
+      { id: 'r2-2', author: 'Mike D.', rating: 5, comment: 'Excellent service from start to finish. Highly recommend!', date: '2024-07-05' }
     ]
   },
   {
@@ -92,6 +101,9 @@ export const vendors: Vendor[] = [
         photos: ['https://picsum.photos/seed/barservice1/600/400', 'https://picsum.photos/seed/barservice2/600/400'],
         priceRange: 'Starting at $500'
       }
+    ],
+    reviews: [
+      { id: 'r3-1', author: 'David L.', rating: 5, comment: 'Made our party a huge hit! The cocktails were creative and delicious.', date: '2024-06-10', avatar: 'https://avatar.vercel.sh/david.png?size=40' }
     ]
   },
   {
@@ -124,6 +136,11 @@ export const vendors: Vendor[] = [
         photos: ['https://picsum.photos/seed/cupcakeservice1/600/400'],
         priceRange: '$48 - $72 per dozen'
       }
+    ],
+     reviews: [
+      { id: 'r4-1', author: 'Emily R.', rating: 5, comment: 'Our wedding cake was absolutely stunning and tasted even better! Thank you!', date: '2024-07-01', avatar: 'https://avatar.vercel.sh/emily.png?size=40' },
+      { id: 'r4-2', author: 'Jessica T.', rating: 5, comment: 'The cupcakes were a huge hit at my daughter\'s birthday party. So creative and delicious.', date: '2024-06-15' },
+      { id: 'r4-3', author: 'Kevin S.', rating: 4.8, comment: 'Professional, talented, and easy to work with. Highly recommend for any special occasion.', date: '2024-05-22', avatar: 'https://avatar.vercel.sh/kevin.png?size=40' }
     ]
   },
   {
@@ -160,6 +177,8 @@ export const vendors: Vendor[] = [
     city: 'Austin',
     categories: ['Photo Booths'],
     profileImage: 'https://picsum.photos/seed/photobooth1/400/300',
+    rating: 4.5,
+    reviewsCount: 60,
     services: [
       {
         id: 's6-1',
@@ -169,6 +188,9 @@ export const vendors: Vendor[] = [
         photos: ['https://picsum.photos/seed/photoboothservice1/600/400'],
         priceRange: '$450 - $600'
       }
+    ],
+    reviews: [
+        { id: 'r6-1', author: 'Olivia C.', rating: 4.5, comment: 'Fun props and great quality photos! The attendant was super helpful.', date: '2024-07-10', avatar: 'https://avatar.vercel.sh/olivia.png?size=40'}
     ]
   },
   {
@@ -205,6 +227,8 @@ export const vendors: Vendor[] = [
     city: 'Chicago',
     categories: ['Bands'],
     profileImage: 'https://picsum.photos/seed/band1/400/300',
+    rating: 4.6,
+    reviewsCount: 40,
     services: [
       {
         id: 's8-1',
@@ -391,5 +415,6 @@ export const searchVendors = (filters: SearchFilters): Vendor[] => {
       )
     );
   }
-  return filteredVendors.slice(0, 10); // Limit to 10 results
+  // Return all matching vendors, the limit will be applied in the component displaying the results
+  return filteredVendors;
 };

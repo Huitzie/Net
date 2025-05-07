@@ -3,14 +3,17 @@ import type { NextPage, Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import { getVendorBySlug, vendors as allVendors } from '@/data/vendors';
-import type { Service } from '@/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import type { Service, Review } from '@/types';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Heart, MapPin, Star, Phone, Mail, Globe, Users, Eye, MessageSquare } from 'lucide-react';
+import { Heart, MapPin, Star, Phone, Mail, Globe, Users, Eye, MessageSquare, MessageCircle, Edit } from 'lucide-react';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import VendorServiceCard from '@/components/vendors/vendor-service-card';
 import { Separator } from '@/components/ui/separator';
+import StarRating from '@/components/ui/star-rating';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { format } from 'date-fns';
 
 interface VendorPageProps {
   params: {
@@ -43,6 +46,14 @@ const VendorPage: NextPage<VendorPageProps> = ({ params }) => {
   if (!vendor) {
     notFound();
   }
+
+  const formatDate = (dateString: string) => {
+    try {
+      return format(new Date(dateString), 'MMMM d, yyyy');
+    } catch (error) {
+      return dateString; // Fallback if date is invalid
+    }
+  };
 
   return (
     <div className="container mx-auto py-8 px-4 md:px-6">
@@ -82,10 +93,10 @@ const VendorPage: NextPage<VendorPageProps> = ({ params }) => {
                 <MapPin className="h-5 w-5 mr-3 shrink-0 text-primary" />
                 <span>{vendor.city}, {vendor.state}</span>
               </div>
-              {vendor.rating && (
+              {typeof vendor.rating === 'number' && (
                 <div className="flex items-center">
-                  <Star className="h-5 w-5 mr-2 text-yellow-400 fill-yellow-400" />
-                  <span className="font-semibold">{vendor.rating.toFixed(1)}</span>
+                  <StarRating rating={vendor.rating} size={20} starClassName="mr-0.5" />
+                  <span className="ml-2 font-semibold">{vendor.rating.toFixed(1)}</span>
                   <span className="ml-1 text-muted-foreground">({vendor.reviewsCount || 0} reviews)</span>
                 </div>
               )}
@@ -127,7 +138,7 @@ const VendorPage: NextPage<VendorPageProps> = ({ params }) => {
           </Card>
         </div>
 
-        {/* Right Column: About & Services */}
+        {/* Right Column: About, Services, & Reviews */}
         <div className="lg:col-span-2 space-y-8">
           <Card className="shadow-lg">
             <CardHeader>
@@ -156,6 +167,52 @@ const VendorPage: NextPage<VendorPageProps> = ({ params }) => {
               </Card>
             )}
           </div>
+
+          {/* Reviews Section */}
+          <Card className="shadow-lg">
+            <CardHeader className="flex flex-row justify-between items-center">
+              <CardTitle className="text-2xl">Customer Reviews</CardTitle>
+              <Button variant="outline">
+                <Edit className="mr-2 h-4 w-4" /> Write a Review
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {vendor.reviews && vendor.reviews.length > 0 ? (
+                <div className="space-y-6">
+                  {vendor.reviews.map((review: Review) => (
+                    <Card key={review.id} className="bg-muted/30 p-4 shadow-sm">
+                      <CardHeader className="p-0 mb-2 flex flex-row items-start space-x-3">
+                        <Avatar className="h-10 w-10 border">
+                          <AvatarImage src={review.avatar || `https://avatar.vercel.sh/${review.author.replace(/\s+/g, '')}.png?size=40`} alt={review.author} data-ai-hint="user avatar" />
+                          <AvatarFallback>{review.author.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <CardTitle className="text-base font-semibold">{review.author}</CardTitle>
+                          <CardDescription className="text-xs">{formatDate(review.date)}</CardDescription>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="p-0">
+                        <StarRating rating={review.rating} size={16} className="mb-1.5" />
+                        <p className="text-sm text-foreground/90">{review.comment}</p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-10">
+                  <MessageCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">No reviews yet for {vendor.name}.</p>
+                  <p className="text-sm text-muted-foreground">Be the first to share your experience!</p>
+                </div>
+              )}
+            </CardContent>
+             {vendor.reviews && vendor.reviews.length > 3 && (
+              <CardFooter className="justify-center pt-4">
+                <Button variant="link">View All Reviews</Button>
+              </CardFooter>
+            )}
+          </Card>
+
         </div>
       </div>
     </div>

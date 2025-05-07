@@ -7,12 +7,21 @@ export interface Category {
 }
 
 export interface Service {
-  id: string;
+  id:string;
   name: string;
   description: string;
   category: string; // category name
   photos: string[]; // array of image URLs
   priceRange?: string; // e.g., "$50 - $200"
+}
+
+export interface Review {
+  id: string;
+  author: string;
+  avatar?: string; // URL to author's avatar
+  rating: number; // e.g., 4.5
+  comment: string;
+  date: string; // ISO date string
 }
 
 export interface Vendor {
@@ -25,6 +34,7 @@ export interface Vendor {
   city: string;
   categories: string[]; // array of category names
   services: Service[];
+  reviews?: Review[];
   profileImage: string; // URL
   bannerImage?: string; // URL
   rating?: number;
