@@ -3,13 +3,13 @@ import SearchForm from '@/components/search/search-form';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { categories } from '@/data/categories';
-import { Utensils, Camera, Music, Tent, Cake, Wine, Home, Palette, Mic, Truck, MapPin, Sparkles } from 'lucide-react';
+import { Utensils, Camera, Music, Tent, Cake, Wine, Palette, Mic, Truck, MapPin, Sparkles, ListChecks, CalendarCheck, Search as SearchIcon } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 
 const featuredCategories = categories.slice(0, 6); // Show a few featured categories
 
-export default function Home() {
+export default function HomePage() {
   return (
     <div className="flex flex-col items-center">
       {/* Hero Section */}
@@ -73,7 +73,7 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 text-center">
             <div className="flex flex-col items-center">
               <div className="p-4 bg-primary rounded-full mb-4 inline-block">
-                <Search className="h-10 w-10 text-primary-foreground" />
+                <SearchIcon className="h-10 w-10 text-primary-foreground" />
               </div>
               <h3 className="text-xl font-semibold mb-2">1. Search & Discover</h3>
               <p className="text-muted-foreground">Easily find vendors by category, location, and keywords.</p>
@@ -111,8 +111,3 @@ export default function Home() {
     </div>
   );
 }
-
-// Dummy icons if not available in lucide-react, actual components should be imported
-const ListChecks = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 2H8C4.69 2 2 4.69 2 8v13a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8c0-3.31-2.69-6-6-6zM12 12H8m8-4H8"/></svg>;
-const CalendarCheck = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="m9 16 2 2 4-4"/></svg>;
-const Search = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
