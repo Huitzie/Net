@@ -1,4 +1,3 @@
-
 "use client";
 import Link from 'next/link';
 import { siteConfig, type NavItem } from '@/config/site';
@@ -7,7 +6,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LogIn, LogOut, User, ListChecks, LayoutDashboard, Heart, Menu, Search, Sparkles } from 'lucide-react';
 import { useAuthMock } from '@/hooks/use-auth-mock';
-import ConfettiPattern from '@/components/ui/confetti-pattern';
+// import ConfettiPattern from '@/components/ui/confetti-pattern'; // Not used
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import * as React from 'react';
 
@@ -56,7 +55,7 @@ const Header = () => {
   
   const renderAuthButtons = () => (
     <div className="hidden md:flex items-center space-x-2">
-      <Button variant="ghost" asChild className="text-header-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground/80">
+      <Button variant="ghost" asChild className="text-header-foreground hover:bg-header-foreground/10 hover:text-header-foreground">
         <Link href="/login">Log In</Link>
       </Button>
       <Button variant="secondary" asChild className="bg-accent text-accent-foreground hover:bg-accent/90">
@@ -65,8 +64,8 @@ const Header = () => {
       {/* Quick login buttons for testing */}
       {process.env.NODE_ENV === 'development' && (
         <>
-          <Button size="sm" variant="outline" onClick={() => simulateLogin('client')}>Login Client</Button>
-          <Button size="sm" variant="outline" onClick={() => simulateLogin('vendor')}>Login Vendor</Button>
+          <Button size="sm" variant="outline" onClick={() => simulateLogin('client')} className="text-foreground hover:text-accent-foreground">Login Client</Button>
+          <Button size="sm" variant="outline" onClick={() => simulateLogin('vendor')} className="text-foreground hover:text-accent-foreground">Login Vendor</Button>
         </>
       )}
     </div>
@@ -145,7 +144,7 @@ const Header = () => {
           </Link>
           <nav className="hidden md:flex items-center space-x-1 text-sm font-medium">
             {siteConfig.mainNav.map((item: NavItem) => (
-              <Button asChild variant="ghost" className="text-header-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground/80" key={item.href}>
+              <Button asChild variant="ghost" className="text-header-foreground border border-header-foreground/20 hover:bg-header-foreground/10 hover:text-header-foreground" key={item.href}>
                 <Link href={item.href}>
                   {item.title}
                 </Link>
@@ -155,7 +154,7 @@ const Header = () => {
         </div>
 
         <div className="flex items-center space-x-2">
-          <Button variant="ghost" size="icon" asChild className="text-header-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground/80 hidden md:inline-flex">
+          <Button variant="ghost" size="icon" asChild className="text-header-foreground hover:bg-header-foreground/10 hover:text-header-foreground hidden md:inline-flex">
             <Link href="/search">
               <Search className="h-5 w-5" />
               <span className="sr-only">Search</span>
