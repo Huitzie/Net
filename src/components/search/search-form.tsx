@@ -33,7 +33,7 @@ const ALL_CATEGORIES_VALUE = "_all_categories_";
 const searchFormSchema = z.object({
   state: z.string().min(1, "State is required."),
   city: z.string().min(1, "City is required."),
-  category: z.string().optional(),
+  category: z.string().optional().default(ALL_CATEGORIES_VALUE), // Ensure default is set
   keyword: z.string().optional(),
 });
 
@@ -127,10 +127,11 @@ export default function SearchForm({ initialValues }: SearchFormProps) {
     if (data.city) params.append("city", data.city);
     
     let categoryToQuery = data.category;
-    if (categoryToQuery === ALL_CATEGORIES_VALUE) {
-      categoryToQuery = ""; // Treat sentinel as empty string for query (no category filter)
+    if (categoryToQuery === ALL_CATEGORIES_VALUE || !categoryToQuery) { // Check for undefined/empty as well
+      // Do not append category if it's the "all" value or empty/undefined
+    } else {
+      params.append("category", categoryToQuery);
     }
-    if (categoryToQuery) params.append("category", categoryToQuery);
 
     if (data.keyword) params.append("keyword", data.keyword);
     router.push(`/search?${params.toString()}`);
@@ -157,7 +158,7 @@ export default function SearchForm({ initialValues }: SearchFormProps) {
               }} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a state" />
+                    <SelectValue placeholder="Select a state" className="text-primary" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
@@ -185,7 +186,7 @@ export default function SearchForm({ initialValues }: SearchFormProps) {
               >
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a city" />
+                    <SelectValue placeholder="Select a city" className="text-primary"/>
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
@@ -206,10 +207,10 @@ export default function SearchForm({ initialValues }: SearchFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Category</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value || ""}>
+              <Select onValueChange={field.onChange} value={field.value || ALL_CATEGORIES_VALUE}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a category (optional)" />
+                    <SelectValue placeholder="Select a category (optional)" className="text-primary"/>
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
