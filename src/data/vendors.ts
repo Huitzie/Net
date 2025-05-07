@@ -1,8 +1,10 @@
 
-import type { Vendor } from '@/types';
+import type { Vendor, Service } from '@/types';
 import { categories as allCategoriesList } from '@/data/categories';
+import type { ServiceFormValues } from '@/app/dashboard/vendor/services/new/page'; // Assuming this type is appropriate
 
-export const vendors: Vendor[] = [
+// Changed from const to let to allow modification for mock updates
+let vendors: Vendor[] = [
   {
     id: '1',
     name: 'Taco Fiesta Express',
@@ -417,4 +419,87 @@ export const searchVendors = (filters: SearchFilters): Vendor[] => {
   }
   // Return all matching vendors, the limit will be applied in the component displaying the results
   return filteredVendors;
+};
+
+
+export const getVendorServices = (vendorId: string): Service[] | undefined => {
+  const vendor = vendors.find(v => v.id === vendorId);
+  return vendor?.services;
+};
+
+export const getServiceById = (vendorId: string, serviceId: string): Service | undefined => {
+  const vendor = vendors.find(v => v.id === vendorId);
+  return vendor?.services.find(s => s.id === serviceId);
+};
+
+// For mock purposes, this function will mutate the `vendors` array.
+// In a real app, this would involve an API call and state update.
+export const addServiceToVendor = (vendorId: string, serviceData: Omit<Service, 'id'> & { id?: string }): Service | undefined => {
+  const vendorIndex = vendors.findIndex(v => v.id === vendorId);
+  if (vendorIndex === -1) {
+    console.error(`Vendor with ID ${vendorId} not found.`);
+    return undefined;
+  }
+  
+  const newServiceWithId: Service = {
+    ...serviceData,
+    id: serviceData.id || Math.random().toString(36).substring(7) // Ensure ID if not provided
+  };
+
+  vendors[vendorIndex].services.push(newServiceWithId);
+  return newServiceWithId;
+};
+
+export const updateService = (
+  vendorId: string, 
+  serviceId: string, 
+  updatedData: Partial<Omit<Service, 'id'>>
+): Service | undefined => {
+  const vendorIndex = vendors.findIndex(v => v.id === vendorId);
+  if (vendorIndex === -1) {
+    console.error(`Vendor with ID ${vendorId} not found.`);
+    return undefined;
+  }
+
+  const serviceIndex = vendors[vendorIndex].services.findIndex(s => s.id === serviceId);
+  if (serviceIndex === -1) {
+    console.error(`Service with ID ${serviceId} not found for vendor ${vendorId}.`);
+    return undefined;
+  }
+
+  const existingService = vendors[vendorIndex].services[serviceIndex];
+  
+  // Handle photo updates: if updatedData.photos is FileList, process it; otherwise, use existing photos
+  let finalPhotos: string[];
+
+  if (updatedData.photos && updatedData.photos instanceof FileList) {
+    // This is a mock: in a real app, you'd upload these files and get their URLs
+    finalPhotos = Array.from(updatedData.photos).map(file => `mock-updated-${file.name}`);
+  } else if (Array.isArray(updatedData.photos) && updatedData.photos.every(p => typeof p === 'string')) {
+    // If it's already an array of strings (URLs or existing mock names), use it directly
+    finalPhotos = updatedData.photos;
+  } else {
+    // Fallback to existing photos if no new valid photo data is provided
+    finalPhotos = existingService.photos;
+  }
+
+  const updatedServiceEntry: Service = {
+    ...existingService,
+    ...updatedData,
+    photos: finalPhotos, // Use the processed or existing photos
+  };
+  
+  vendors[vendorIndex].services[serviceIndex] = updatedServiceEntry;
+  return updatedServiceEntry;
+};
+
+
+export const deleteService = (vendorId: string, serviceId: string): boolean => {
+  const vendorIndex = vendors.findIndex(v => v.id === vendorId);
+  if (vendorIndex === -1) {
+    return false;
+  }
+  const initialLength = vendors[vendorIndex].services.length;
+  vendors[vendorIndex].services = vendors[vendorIndex].services.filter(s => s.id !== serviceId);
+  return vendors[vendorIndex].services.length < initialLength;
 };

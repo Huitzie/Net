@@ -17,8 +17,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { categories } from '@/data/categories';
-import { ArrowLeft, PlusCircle, UploadCloud } from 'lucide-react';
-import React from 'react';
+import { addServiceToVendor } from '@/data/vendors'; // Import addServiceToVendor
+import type { Service } from '@/types'; // Import Service type
+import { ArrowLeft, PlusCircle, UploadCloud, Trash2 } from 'lucide-react';
+import React, { useState } from 'react';
+import Image from 'next/image';
+
 
 const MAX_FILE_SIZE_MB = 5;
 const MAX_TOTAL_FILES = 5;
@@ -31,6 +35,7 @@ const serviceFormSchema = z.object({
     .custom<FileList>((val) => val instanceof FileList, {
       message: "Expected a list of files.",
     })
+    .refine((files) => files.length > 0, { message: "Please upload at least one photo."})
     .refine((files) => files.length <= MAX_TOTAL_FILES, {
       message: `You can upload a maximum of ${MAX_TOTAL_FILES} photos.`,
     })
@@ -42,16 +47,18 @@ const serviceFormSchema = z.object({
       (files) => Array.from(files).every((file) => file.type.startsWith("image/")),
       { message: "Only image files are allowed (e.g., JPG, PNG, GIF)." }
     )
-    .optional(),
+    .optional(), // Keep optional here as FileList might not exist on initial render or if no files chosen
   priceRange: z.string().max(50, { message: "Price range too long." }).optional(),
 });
 
-type ServiceFormValues = z.infer<typeof serviceFormSchema>;
+export type ServiceFormValues = z.infer<typeof serviceFormSchema>;
 
 const AddNewServicePage: NextPage = () => {
   const { isAuthenticated, user } = useAuthMock();
   const router = useRouter();
   const { toast } = useToast();
+  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
+
 
   const form = useForm<ServiceFormValues>({
     resolver: zodResolver(serviceFormSchema),
@@ -75,30 +82,71 @@ const AddNewServicePage: NextPage = () => {
       </div>
     );
   }
+  
+  const handlePhotoFiles = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files) {
+      form.setValue("photos", files, { shouldValidate: true }); // Update RHF
+      const previews = Array.from(files).map(file => URL.createObjectURL(file));
+      setPhotoPreviews(previews);
+    } else {
+      form.setValue("photos", undefined); // Clear if no files selected
+      setPhotoPreviews([]);
+    }
+  };
+
+  const removePhotoPreview = (index: number) => {
+    setPhotoPreviews(prev => prev.filter((_, i) => i !== index));
+    const currentFiles = form.getValues("photos");
+    if (currentFiles) {
+      const updatedFilesArray = Array.from(currentFiles).filter((_, i) => i !== index);
+      // Create a new FileList
+      const dataTransfer = new DataTransfer();
+      updatedFilesArray.forEach(file => dataTransfer.items.add(file));
+      form.setValue("photos", dataTransfer.files.length > 0 ? dataTransfer.files : undefined, { shouldValidate: true });
+    }
+  };
+
 
   const onSubmit = (data: ServiceFormValues) => {
-    let photoDataForSubmission: string[] = [];
-    if (data.photos && data.photos.length > 0) {
-      // Mock: In a real app, upload files and get URLs. Here, we'll just use filenames.
-      photoDataForSubmission = Array.from(data.photos).map(file => `mock-uploaded-${file.name}`);
+    if (!user?.id) {
+      toast({ title: "User not found", variant: "destructive"});
+      return;
+    }
+    if (!data.photos || data.photos.length === 0) {
+        form.setError("photos", { type: "manual", message: "Please upload at least one photo." });
+        return;
     }
 
-    const newService = {
-      id: Math.random().toString(36).substring(7), // Mock ID
+    // Mock photo upload: In a real app, you'd upload files here and get URLs.
+    // For this mock, we'll just use file names.
+    const photoFileNames = Array.from(data.photos).map(file => `mock-uploaded-${file.name}`);
+
+    const newService: Omit<Service, 'id'> = { // Omit ID as it will be generated
       name: data.name,
       description: data.description,
       category: data.category, // This is category name, consistent with Service type
-      photos: photoDataForSubmission,
+      photos: photoFileNames,
       priceRange: data.priceRange,
     };
-    console.log('New Service Data:', newService);
-    toast({
-      title: 'Service Added (Mock)!',
-      description: `The service "${data.name}" has been successfully added (simulated).`,
-    });
-    form.reset();
-    // Optionally, redirect to a services management page or dashboard
-    // router.push('/dashboard/vendor/services'); 
+    
+    const addedService = addServiceToVendor(user.id, newService as Service); // Cast as Service for mock
+
+    if (addedService) {
+      toast({
+        title: 'Service Added!',
+        description: `The service "${data.name}" has been successfully added.`,
+      });
+      form.reset();
+      setPhotoPreviews([]);
+      router.push('/dashboard/vendor/services'); // Redirect to services management page
+    } else {
+      toast({
+        title: 'Error Adding Service',
+        description: 'There was an issue adding the service. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
@@ -182,7 +230,7 @@ const AddNewServicePage: NextPage = () => {
               <FormField
                 control={form.control}
                 name="photos"
-                render={({ field: { onChange, value, ...restField } }) => ( // Destructure field to handle onChange specifically
+                render={({ fieldState }) => ( 
                   <FormItem>
                     <FormLabel>Service Photos</FormLabel>
                     <FormControl>
@@ -190,26 +238,34 @@ const AddNewServicePage: NextPage = () => {
                         <Input
                           type="file"
                           multiple
-                          onChange={(e) => onChange(e.target.files)} // Pass FileList to RHF
-                          {...restField} // Pass other props like name, onBlur, ref
+                          onChange={handlePhotoFiles}
                           className="flex-grow text-sm file:mr-2 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
                         />
                         <UploadCloud className="h-6 w-6 text-muted-foreground" />
                       </div>
                     </FormControl>
                     <FormDescription>
-                      Upload images showcasing this service (max {MAX_TOTAL_FILES} files, {MAX_FILE_SIZE_MB}MB each).
+                      Upload images showcasing this service (max {MAX_TOTAL_FILES} files, {MAX_FILE_SIZE_MB}MB each). At least one photo required.
                     </FormDescription>
-                    {value && value.length > 0 && (
-                      <div className="mt-2 space-y-1">
-                        <p className="text-sm font-medium">Selected files:</p>
-                        <ul className="list-disc list-inside text-sm text-muted-foreground max-h-32 overflow-y-auto">
-                          {Array.from(value).map((file: File, index: number) => (
-                            <li key={index} className="truncate" title={file.name}>
-                              {file.name} ({(file.size / (1024 * 1024)).toFixed(2)} MB)
-                            </li>
+                     {photoPreviews.length > 0 && (
+                      <div className="mt-3 space-y-2">
+                        <p className="text-sm font-medium">Selected photo previews:</p>
+                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                          {photoPreviews.map((previewUrl, index) => (
+                            <div key={index} className="relative group aspect-square border rounded-md overflow-hidden shadow">
+                              <Image src={previewUrl} alt={`Photo preview ${index + 1}`} layout="fill" objectFit="cover" data-ai-hint="photo preview" />
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon"
+                                className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => removePhotoPreview(index)}
+                                >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
                           ))}
-                        </ul>
+                        </div>
                       </div>
                     )}
                     <FormMessage />
@@ -234,7 +290,7 @@ const AddNewServicePage: NextPage = () => {
               />
 
               <div className="flex justify-end pt-4">
-                <Button type="submit" className="bg-accent hover:bg-accent/90">
+                <Button type="submit" className="bg-accent hover:bg-accent/90" disabled={form.formState.isSubmitting}>
                   <PlusCircle className="mr-2 h-4 w-4" /> Add Service
                 </Button>
               </div>

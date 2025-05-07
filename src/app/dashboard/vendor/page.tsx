@@ -127,7 +127,7 @@ const VendorDashboardPage: NextPage = () => {
               <ListOrdered className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
               <p className="text-muted-foreground mb-2">Your listed services will appear here.</p>
               <Button variant="secondary" asChild>
-                <Link href="/dashboard/vendor/services"><PlusCircle className="mr-2 h-4 w-4" /> Manage Services</Link>
+                <Link href="/dashboard/vendor/services"><ListOrdered className="mr-2 h-4 w-4" /> Manage Services</Link>
               </Button>
             </div>
           </CardContent>
