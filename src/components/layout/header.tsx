@@ -56,7 +56,7 @@ const Header = () => {
   
   const renderAuthButtons = () => (
     <div className="hidden md:flex items-center space-x-2">
-      <Button variant="ghost" asChild className="text-header-foreground hover:bg-primary-foreground/10 hover:text-primary">
+      <Button variant="ghost" asChild className="text-header-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground/80">
         <Link href="/login">Log In</Link>
       </Button>
       <Button variant="secondary" asChild className="bg-accent text-accent-foreground hover:bg-accent/90">
@@ -87,30 +87,34 @@ const Header = () => {
         </Link>
         <nav className="flex flex-col space-y-3">
           {siteConfig.mainNav.map((item) => (
-            <Link
+             <Button
               key={item.href}
-              href={item.href}
-              className="text-lg font-medium text-foreground hover:text-primary"
+              asChild
+              variant="ghost"
+              className="justify-start text-lg font-medium text-foreground hover:text-primary"
               onClick={() => setIsMobileMenuOpen(false)}
             >
-              {item.title}
-            </Link>
+              <Link href={item.href}>{item.title}</Link>
+            </Button>
           ))}
           <hr className="my-3"/>
           {isAuthenticated ? (
             <>
               {userNavigation.map((item) => (
-                 <Link
+                 <Button
                   key={item.href}
-                  href={item.href}
-                  className="text-lg font-medium text-foreground hover:text-primary flex items-center gap-2"
+                  asChild
+                  variant="ghost"
+                  className="justify-start text-lg font-medium text-foreground hover:text-primary flex items-center gap-2"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  {item.title === "My Favs" && <Heart className="h-5 w-5" />}
-                  {item.title === "Dashboard" && <LayoutDashboard className="h-5 w-5" />}
-                  {item.title === "My Profile" && <User className="h-5 w-5" />}
-                  {item.title}
-                </Link>
+                  <Link href={item.href}>
+                    {item.title === "My Favs" && <Heart className="h-5 w-5" />}
+                    {item.title === "Dashboard" && <LayoutDashboard className="h-5 w-5" />}
+                    {item.title === "My Profile" && <User className="h-5 w-5" />}
+                    {item.title}
+                  </Link>
+                </Button>
               ))}
               <Button onClick={() => { logout(); setIsMobileMenuOpen(false); }} variant="ghost" className="w-full justify-start text-lg font-medium flex items-center gap-2 text-foreground hover:text-primary">
                 <LogOut className="h-5 w-5" /> Log out
@@ -118,8 +122,12 @@ const Header = () => {
             </>
           ) : (
             <>
-              <Link href="/login" className="text-lg font-medium text-foreground hover:text-primary" onClick={() => setIsMobileMenuOpen(false)}>Log In</Link>
-              <Link href="/signup" className="text-lg font-medium text-foreground hover:text-primary" onClick={() => setIsMobileMenuOpen(false)}>Sign Up</Link>
+               <Button asChild variant="ghost" className="justify-start text-lg font-medium text-foreground hover:text-primary" onClick={() => setIsMobileMenuOpen(false)}>
+                <Link href="/login">Log In</Link>
+              </Button>
+              <Button asChild variant="ghost" className="justify-start text-lg font-medium text-foreground hover:text-primary" onClick={() => setIsMobileMenuOpen(false)}>
+                <Link href="/signup">Sign Up</Link>
+              </Button>
             </>
           )}
         </nav>
@@ -129,9 +137,6 @@ const Header = () => {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-header-background text-header-foreground shadow-md">
-      <div className="absolute inset-0 opacity-20">
-        <ConfettiPattern className="w-full h-full" />
-      </div>
       <div className="container mx-auto flex h-20 items-center justify-between px-4 md:px-6 relative">
         <div className="flex items-center space-x-2 md:space-x-6">
           <Link href="/" className="flex items-center space-x-2">
@@ -140,7 +145,7 @@ const Header = () => {
           </Link>
           <nav className="hidden md:flex items-center space-x-1 text-sm font-medium">
             {siteConfig.mainNav.map((item: NavItem) => (
-              <Button asChild variant="ghost" className="text-header-foreground hover:bg-primary-foreground/10 hover:text-primary" key={item.href}>
+              <Button asChild variant="ghost" className="text-header-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground/80" key={item.href}>
                 <Link href={item.href}>
                   {item.title}
                 </Link>
@@ -150,7 +155,7 @@ const Header = () => {
         </div>
 
         <div className="flex items-center space-x-2">
-          <Button variant="ghost" size="icon" asChild className="text-header-foreground hover:bg-primary-foreground/10 hover:text-primary hidden md:inline-flex">
+          <Button variant="ghost" size="icon" asChild className="text-header-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground/80 hidden md:inline-flex">
             <Link href="/search">
               <Search className="h-5 w-5" />
               <span className="sr-only">Search</span>
@@ -165,5 +170,3 @@ const Header = () => {
 };
 
 export default Header;
-
-    
