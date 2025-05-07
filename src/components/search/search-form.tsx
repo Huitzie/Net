@@ -1,3 +1,4 @@
+
 "use client";
 
 import  { zodResolver } from "@hookform/resolvers/zod";
@@ -27,6 +28,8 @@ import { categories as allCategories } from "@/data/categories";
 import { getCitiesByState, getStates, type City } from '@/services/geo'; // Assuming geo service exists
 import { Search } from "lucide-react";
 
+const ALL_CATEGORIES_VALUE = "_all_categories_";
+
 const searchFormSchema = z.object({
   state: z.string().min(1, "State is required."),
   city: z.string().min(1, "City is required."),
@@ -50,7 +53,7 @@ export default function SearchForm({ initialValues }: SearchFormProps) {
     defaultValues: {
       state: initialValues?.state || "",
       city: initialValues?.city || "",
-      category: initialValues?.category || "",
+      category: initialValues?.category || "", // If initial is "" placeholder shows, if initial is ALL_CATEGORIES_VALUE, "All Categories" shows
       keyword: initialValues?.keyword || "",
     },
   });
@@ -73,31 +76,62 @@ export default function SearchForm({ initialValues }: SearchFormProps) {
       if (selectedState) {
         const fetchedCities = await getCitiesByState(selectedState);
         setCities(fetchedCities);
-        if (initialValues?.city && fetchedCities.some(c => c.city === initialValues.city)) {
-          form.setValue("city", initialValues.city);
-        } else if (fetchedCities.length > 0 && form.getValues("city") === "") {
-          // form.setValue("city", ""); // Reset city if state changes and previous city not in new list
+        // Check if initialValues.city is present and is among the fetched cities
+        const currentFormCity = form.getValues("city");
+        const initialCityExistsInNewList = initialValues?.city && fetchedCities.some(c => c.city === initialValues.city);
+
+        if (initialValues?.city && initialCityExistsInNewList) {
+            // If there's an initial city and it's valid for the new state, set it.
+             if (currentFormCity !== initialValues.city) { // Only set if different to avoid loop if initialValues itself causes re-render
+                form.setValue("city", initialValues.city);
+            }
+        } else if (initialValues?.city && !initialCityExistsInNewList && selectedState === initialValues.state) {
+            // If there was an initial city for the same state, but it's no longer valid (e.g. data changed),
+            // and the current form city is that invalid initial city, reset it to allow placeholder or new selection.
+            if (currentFormCity === initialValues.city) {
+                 form.setValue("city", "");
+            }
+        } else if (!initialValues?.city && currentFormCity && !fetchedCities.some(c => c.city === currentFormCity)) {
+            // If there was no initial city, but the form has a city selected that's not in the new list, reset.
+            form.setValue("city", "");
+        } else if (fetchedCities.length > 0 && currentFormCity === "" && !initialValues?.city) {
+            // If cities are loaded, form city is empty, and there was no initial city, do nothing (let placeholder show)
         }
+
+
       } else {
         setCities([]);
-        // form.setValue("city", ""); // Reset city if state is cleared
+         if (form.getValues("city") !== "") { // Only reset if not already empty
+            form.setValue("city", ""); 
+        }
       }
     }
     if (selectedState) {
         fetchCities();
     } else {
         setCities([]);
-        if (!initialValues?.city) form.setValue("city", "");
+        // If state is cleared, clear city unless it was an initial value we want to preserve until state is selected
+        if (!initialValues?.city || initialValues?.state !== selectedState ) {
+           if (form.getValues("city") !== "") {
+             form.setValue("city", "");
+           }
+        }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedState, initialValues?.city, form.setValue]);
+  }, [selectedState, initialValues?.city, initialValues?.state, form.setValue, form.getValues]);
 
 
   function onSubmit(data: SearchFormValues) {
     const params = new URLSearchParams();
     if (data.state) params.append("state", data.state);
     if (data.city) params.append("city", data.city);
-    if (data.category) params.append("category", data.category);
+    
+    let categoryToQuery = data.category;
+    if (categoryToQuery === ALL_CATEGORIES_VALUE) {
+      categoryToQuery = ""; // Treat sentinel as empty string for query (no category filter)
+    }
+    if (categoryToQuery) params.append("category", categoryToQuery);
+
     if (data.keyword) params.append("keyword", data.keyword);
     router.push(`/search?${params.toString()}`);
   }
@@ -111,7 +145,16 @@ export default function SearchForm({ initialValues }: SearchFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>State</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={ (value) => {
+                field.onChange(value);
+                // If changing state, and current city was from initialValues but for a different state, clear it.
+                if (initialValues?.state && value !== initialValues.state && initialValues.city === form.getValues().city) {
+                  form.setValue('city', '');
+                } else if (!initialValues?.state && form.getValues().city && cities.length > 0 && !cities.find(c => c.city === form.getValues().city)) {
+                  // Or if no initial state, and current city is not in the new list of cities, clear it.
+                   form.setValue('city', '');
+                }
+              }} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a state" />
@@ -135,7 +178,11 @@ export default function SearchForm({ initialValues }: SearchFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>City</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!selectedState || cities.length === 0}>
+              <Select 
+                onValueChange={field.onChange} 
+                value={field.value} // Controlled component
+                disabled={!selectedState || cities.length === 0}
+              >
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a city" />
@@ -159,14 +206,14 @@ export default function SearchForm({ initialValues }: SearchFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Category</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} value={field.value || ""}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a category (optional)" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="">All Categories</SelectItem>
+                  <SelectItem value={ALL_CATEGORIES_VALUE}>All Categories</SelectItem>
                   {allCategories.map((category) => (
                     <SelectItem key={category.id} value={category.id}>
                       {category.name}
@@ -202,3 +249,4 @@ export default function SearchForm({ initialValues }: SearchFormProps) {
     </Form>
   );
 }
+
