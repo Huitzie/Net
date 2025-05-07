@@ -33,7 +33,7 @@ const serviceFormSchema = z.object({
       return false;
     }
   }, { message: "Please provide valid URLs, separated by commas." }),
-  priceRange: z.string().optional().max(50, { message: "Price range too long." }),
+  priceRange: z.string().max(50, { message: "Price range too long." }).optional(),
 });
 
 type ServiceFormValues = z.infer<typeof serviceFormSchema>;
