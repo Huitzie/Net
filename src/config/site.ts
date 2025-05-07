@@ -10,15 +10,11 @@ export type NavItem = {
 
 export const siteConfig = {
   name: "Venue Vendors",
-  description: "Find and book the best vendors for your events. From taco trucks to wedding planners, we've got you covered!",
+  description: "Find and book top vendors for your events!",
   mainNav: [
     {
       title: "Home",
       href: "/",
-    },
-    {
-      title: "Browse Vendors",
-      href: "/search",
     },
     {
       title: "Suggest a Category",
@@ -36,3 +32,4 @@ export const siteConfig = {
     ],
   }
 };
+
