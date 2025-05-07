@@ -17,22 +17,32 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { categories } from '@/data/categories';
-import { ArrowLeft, PlusCircle } from 'lucide-react';
+import { ArrowLeft, PlusCircle, UploadCloud } from 'lucide-react';
+import React from 'react';
+
+const MAX_FILE_SIZE_MB = 5;
+const MAX_TOTAL_FILES = 5;
 
 const serviceFormSchema = z.object({
   name: z.string().min(3, { message: "Service name must be at least 3 characters." }).max(100, { message: "Service name too long." }),
   description: z.string().min(10, { message: "Description must be at least 10 characters." }).max(1000, { message: "Description too long." }),
   category: z.string({ required_error: "Please select a category." }).min(1, { message: "Please select a category." }),
-  photos: z.string().optional().refine(val => {
-    if (!val || val.trim() === '') return true;
-    const urls = val.split(',').map(url => url.trim());
-    try {
-      urls.forEach(url => new URL(url));
-      return true;
-    } catch (error) {
-      return false;
-    }
-  }, { message: "Please provide valid URLs, separated by commas." }),
+  photos: z
+    .custom<FileList>((val) => val instanceof FileList, {
+      message: "Expected a list of files.",
+    })
+    .refine((files) => files.length <= MAX_TOTAL_FILES, {
+      message: `You can upload a maximum of ${MAX_TOTAL_FILES} photos.`,
+    })
+    .refine(
+      (files) => Array.from(files).every((file) => file.size <= MAX_FILE_SIZE_MB * 1024 * 1024),
+      { message: `Each file must be ${MAX_FILE_SIZE_MB}MB or less.` }
+    )
+    .refine(
+      (files) => Array.from(files).every((file) => file.type.startsWith("image/")),
+      { message: "Only image files are allowed (e.g., JPG, PNG, GIF)." }
+    )
+    .optional(),
   priceRange: z.string().max(50, { message: "Price range too long." }).optional(),
 });
 
@@ -49,7 +59,7 @@ const AddNewServicePage: NextPage = () => {
       name: '',
       description: '',
       category: '',
-      photos: '',
+      photos: undefined,
       priceRange: '',
     },
   });
@@ -67,11 +77,19 @@ const AddNewServicePage: NextPage = () => {
   }
 
   const onSubmit = (data: ServiceFormValues) => {
-    // Mock submission
+    let photoDataForSubmission: string[] = [];
+    if (data.photos && data.photos.length > 0) {
+      // Mock: In a real app, upload files and get URLs. Here, we'll just use filenames.
+      photoDataForSubmission = Array.from(data.photos).map(file => `mock-uploaded-${file.name}`);
+    }
+
     const newService = {
-      ...data,
       id: Math.random().toString(36).substring(7), // Mock ID
-      photos: data.photos ? data.photos.split(',').map(url => url.trim()).filter(url => url) : [],
+      name: data.name,
+      description: data.description,
+      category: data.category, // This is category name, consistent with Service type
+      photos: photoDataForSubmission,
+      priceRange: data.priceRange,
     };
     console.log('New Service Data:', newService);
     toast({
@@ -164,19 +182,41 @@ const AddNewServicePage: NextPage = () => {
               <FormField
                 control={form.control}
                 name="photos"
-                render={({ field }) => (
+                render={({ field: { onChange, value, ...restField } }) => ( // Destructure field to handle onChange specifically
                   <FormItem>
-                    <FormLabel>Service Photos (URLs)</FormLabel>
+                    <FormLabel>Service Photos</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., https://example.com/photo1.jpg, https://example.com/photo2.jpg" {...field} />
+                      <div className="flex items-center space-x-2">
+                        <Input
+                          type="file"
+                          multiple
+                          onChange={(e) => onChange(e.target.files)} // Pass FileList to RHF
+                          {...restField} // Pass other props like name, onBlur, ref
+                          className="flex-grow text-sm file:mr-2 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                        />
+                        <UploadCloud className="h-6 w-6 text-muted-foreground" />
+                      </div>
                     </FormControl>
                     <FormDescription>
-                      Enter comma-separated URLs for images showcasing this service. (File upload coming soon!)
+                      Upload images showcasing this service (max {MAX_TOTAL_FILES} files, {MAX_FILE_SIZE_MB}MB each).
                     </FormDescription>
+                    {value && value.length > 0 && (
+                      <div className="mt-2 space-y-1">
+                        <p className="text-sm font-medium">Selected files:</p>
+                        <ul className="list-disc list-inside text-sm text-muted-foreground max-h-32 overflow-y-auto">
+                          {Array.from(value).map((file: File, index: number) => (
+                            <li key={index} className="truncate" title={file.name}>
+                              {file.name} ({(file.size / (1024 * 1024)).toFixed(2)} MB)
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
 
               <FormField
                 control={form.control}
