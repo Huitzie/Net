@@ -216,5 +216,3 @@ const ManageServicesPage: NextPage = () => {
 };
 
 export default ManageServicesPage;
-
-```
