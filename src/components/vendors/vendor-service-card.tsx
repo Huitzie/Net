@@ -1,3 +1,4 @@
+
 "use client";
 import type { Service } from '@/types';
 import Image from 'next/image';
@@ -8,7 +9,7 @@ import { Heart, DollarSign, Tag } from 'lucide-react';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { useAuthMock } from '@/hooks/use-auth-mock';
 import { useToast } from '@/hooks/use-toast';
-import { useAtom, atom } from 'jotai';
+import { useAtom } from 'jotai';
 import { atomWithStorage, createJSONStorage } from 'jotai/utils';
 
 interface FavoriteService {
