@@ -24,9 +24,8 @@ const VendorCard: React.FC<VendorCardProps> = ({ vendor }) => {
             <Image
               src={vendor.profileImage || 'https://picsum.photos/seed/placeholder/400/300'}
               alt={vendor.name}
-              layout="fill"
-              objectFit="cover"
-              className="transition-transform duration-300 group-hover:scale-105"
+              fill
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
               data-ai-hint="vendor service"
             />
           </div>

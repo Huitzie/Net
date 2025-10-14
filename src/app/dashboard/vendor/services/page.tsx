@@ -147,9 +147,8 @@ const ManageServicesPage: NextPage = () => {
                     <Image
                       src={service.photos[0]}
                       alt={service.name}
-                      layout="fill"
-                      objectFit="cover"
-                      className="md:rounded-l-lg md:rounded-tr-none"
+                      fill
+                      className="object-cover md:rounded-l-lg md:rounded-tr-none"
                       data-ai-hint="service photo"
                     />
                   </div>

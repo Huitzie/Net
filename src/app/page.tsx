@@ -18,8 +18,8 @@ export default function HomePage() {
            <Image 
             src="https://picsum.photos/seed/partyfood/1920/1080" 
             alt="Catering food platters at a party" 
-            layout="fill" 
-            objectFit="cover" 
+            fill 
+            className="object-cover"
             data-ai-hint="party food" 
             priority
            />
@@ -118,4 +118,3 @@ export default function HomePage() {
     </div>
   );
 }
-

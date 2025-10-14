@@ -63,8 +63,8 @@ const VendorPage: NextPage<VendorPageProps> = ({ params }) => {
           <Image 
             src={vendor.bannerImage} 
             alt={`${vendor.name} banner`} 
-            layout="fill" 
-            objectFit="cover" 
+            fill 
+            className="object-cover"
             priority
             data-ai-hint="vendor event setup" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
@@ -79,8 +79,8 @@ const VendorPage: NextPage<VendorPageProps> = ({ params }) => {
               <Image 
                 src={vendor.profileImage} 
                 alt={vendor.name} 
-                layout="fill" 
-                objectFit="cover"
+                fill 
+                className="object-cover"
                 data-ai-hint="vendor portrait"
               />
             </div>

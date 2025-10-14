@@ -70,9 +70,8 @@ const VendorServiceCard: React.FC<VendorServiceCardProps> = ({ service, vendorId
                         <Image
                           src={photo}
                           alt={`${service.name} photo ${index + 1}`}
-                          layout="fill"
-                          objectFit="cover"
-                          className="rounded-t-lg md:rounded-l-lg md:rounded-tr-none"
+                          fill
+                          className="object-cover rounded-t-lg md:rounded-l-lg md:rounded-tr-none"
                           data-ai-hint="service item photo"
                         />
                       </div>
@@ -91,9 +90,8 @@ const VendorServiceCard: React.FC<VendorServiceCardProps> = ({ service, vendorId
                  <Image
                     src={service.photos[0]}
                     alt={service.name}
-                    layout="fill"
-                    objectFit="cover"
-                    className="rounded-t-lg md:rounded-l-lg md:rounded-tr-none"
+                    fill
+                    className="object-cover rounded-t-lg md:rounded-l-lg md:rounded-tr-none"
                     data-ai-hint="service item photo"
                   />
                </div>

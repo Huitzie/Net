@@ -267,7 +267,7 @@ const EditServicePage: NextPage = () => {
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                     {existingPhotos.map((photoUrl, index) => (
                       <div key={`existing-${index}`} className="relative group aspect-square border rounded-md overflow-hidden shadow">
-                        <Image src={photoUrl} alt={`Existing photo ${index + 1}`} layout="fill" objectFit="cover" data-ai-hint="service photo" />
+                        <Image src={photoUrl} alt={`Existing photo ${index + 1}`} fill objectFit="cover" data-ai-hint="service photo" />
                         <Button
                           type="button"
                           variant="destructive"
@@ -314,7 +314,7 @@ const EditServicePage: NextPage = () => {
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                           {newPhotoPreviews.map((previewUrl, index) => (
                              <div key={`new-${index}`} className="relative group aspect-square border rounded-md overflow-hidden shadow">
-                              <Image src={previewUrl} alt={`New photo preview ${index + 1}`} layout="fill" objectFit="cover" data-ai-hint="service photo preview" />
+                              <Image src={previewUrl} alt={`New photo preview ${index + 1}`} fill objectFit="cover" data-ai-hint="service photo preview" />
                               <Button
                                 type="button"
                                 variant="destructive"
