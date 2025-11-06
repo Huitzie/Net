@@ -18,7 +18,7 @@ run:
   # Optional: specify custom environment variables
   env:
     - variable: 'NEXT_PUBLIC_APP_URL'
-      value: 'https://your-app-url.apphosting.dev'
+      value: 'https://venuevendors.org'
 
 # Specifies the number of concurrent requests per instance
 concurrency: 80
