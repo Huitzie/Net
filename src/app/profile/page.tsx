@@ -2,18 +2,37 @@
 "use client";
 import type { NextPage } from 'next';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { doc, deleteDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Edit3, Mail, UserCircle2, Shield, RefreshCw } from 'lucide-react';
+import { Edit3, Mail, UserCircle2, Shield, RefreshCw, Trash2, KeyRound } from 'lucide-react';
 import Link from 'next/link';
+import { useAuth } from '@/firebase';
+import { sendPasswordResetEmail, deleteUser } from 'firebase/auth';
+import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useRouter } from 'next/navigation';
+
 
 const UserProfilePage: NextPage = () => {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const auth = useAuth();
+  const { toast } = useToast();
+  const router = useRouter();
 
   const userProfileRef = useMemoFirebase(() => {
       if (!firestore || !user?.uid) return null;
@@ -23,6 +42,61 @@ const UserProfilePage: NextPage = () => {
   const {data: userProfile, isLoading: isProfileLoading} = useDoc<{accountType: 'client' | 'vendor'}>(userProfileRef);
   
   const isLoading = isUserLoading || isProfileLoading;
+
+  const handlePasswordReset = async () => {
+    if (!user?.email) {
+      toast({
+        title: "Error",
+        description: "No email address found for this user.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, user.email);
+      toast({
+        title: "Password Reset Email Sent",
+        description: `An email has been sent to ${user.email} with instructions to reset your password.`,
+      });
+    } catch (error: any) {
+      console.error("Password reset error:", error);
+      toast({
+        title: "Password Reset Failed",
+        description: error.message || "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user || !userProfileRef) return;
+
+    try {
+      // First, delete Firestore documents associated with the user.
+      if (userProfile?.accountType === 'vendor') {
+        const vendorDocRef = doc(firestore, 'vendors', user.uid);
+        // Note: This doesn't delete subcollections like services. A Cloud Function would be needed for full cleanup.
+        await deleteDoc(vendorDocRef);
+      }
+      await deleteDoc(userProfileRef);
+      
+      // Finally, delete the Firebase Auth user.
+      await deleteUser(user);
+
+      toast({
+        title: "Account Deleted",
+        description: "Your account has been permanently deleted.",
+      });
+      router.push('/'); // Redirect to homepage after deletion
+    } catch (error: any) {
+       console.error("Error deleting account:", error);
+       toast({
+        title: "Deletion Failed",
+        description: error.message || "An error occurred while deleting your account. You may need to log in again to complete this action.",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -85,9 +159,33 @@ const UserProfilePage: NextPage = () => {
           
           <div className="pt-4 border-t">
             <h3 className="text-lg font-semibold mb-2">Account Settings</h3>
-            <Button variant="link" className="p-0 h-auto text-primary" disabled>Change Password</Button><br/>
-            <Button variant="link" className="p-0 h-auto text-destructive" disabled>Delete Account</Button>
-             <p className="text-xs text-muted-foreground mt-2">Editing functionality is not yet implemented.</p>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button variant="outline" onClick={handlePasswordReset}>
+                  <KeyRound className="mr-2 h-4 w-4" /> Change Password
+              </Button>
+              <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                      <Button variant="destructive">
+                          <Trash2 className="mr-2 h-4 w-4" /> Delete Account
+                      </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                      <AlertDialogHeader>
+                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                              This action cannot be undone. This will permanently delete your account
+                              and remove all your data from our servers.
+                          </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleDeleteAccount} className="bg-destructive hover:bg-destructive/90">
+                              Yes, Delete My Account
+                          </AlertDialogAction>
+                      </AlertDialogFooter>
+                  </AlertDialogContent>
+              </AlertDialog>
+            </div>
           </div>
 
           {accountType === 'vendor' && (

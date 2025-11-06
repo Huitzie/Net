@@ -33,41 +33,56 @@ const MyFavsPage: NextPage = () => {
 
   useEffect(() => {
     const fetchFavoriteDetails = async () => {
-      if (!clientProfile?.favoriteVendorIds || !firestore) {
+      if (!firestore) return;
+      if (!clientProfile) {
+        setIsLoadingDetails(false);
+        // If profile is loaded but has no favs, or doesn't exist, we're done.
+        if(!isProfileLoading) {
+            setFavoritesDetails([]);
+        }
+        return;
+      }
+      
+      const favoriteIds = clientProfile.favoriteVendorIds;
+      if (!favoriteIds || favoriteIds.length === 0) {
+        setFavoritesDetails([]);
         setIsLoadingDetails(false);
         return;
       }
+      
       setIsLoadingDetails(true);
       const details: FavoriteDetail[] = [];
-      for (const favId of clientProfile.favoriteVendorIds) {
+      const promises = favoriteIds.map(async (favId) => {
         const [vendorId, serviceId] = favId.split('_');
         if (vendorId && serviceId) {
-          const vendorRef = doc(firestore, 'vendors', vendorId);
-          const serviceRef = doc(firestore, 'vendors', vendorId, 'services', serviceId);
-          
-          const [vendorSnap, serviceSnap] = await Promise.all([
-            getDoc(vendorRef),
-            getDoc(serviceRef)
-          ]);
-
-          if (vendorSnap.exists() && serviceSnap.exists()) {
-            const vendorData = { id: vendorSnap.id, ...vendorSnap.data() } as Vendor;
-            const serviceData = { id: serviceSnap.id, ...serviceSnap.data() } as Service;
+          try {
+            const vendorRef = doc(firestore, 'vendors', vendorId);
+            const serviceRef = doc(firestore, 'vendors', vendorId, 'services', serviceId);
             
-            const existingVendor = details.find(d => d.vendor.id === vendorId);
-            if (existingVendor) {
-              // This logic might need adjustment if you want to group services under one vendor card
+            const [vendorSnap, serviceSnap] = await Promise.all([
+              getDoc(vendorRef),
+              getDoc(serviceRef)
+            ]);
+
+            if (vendorSnap.exists() && serviceSnap.exists()) {
+              const vendorData = { id: vendorSnap.id, ...vendorSnap.data() } as Vendor;
+              const serviceData = { id: serviceSnap.id, ...serviceSnap.data() } as Service;
+              return { vendor: vendorData, service: serviceData };
             }
-            details.push({ vendor: vendorData, service: serviceData });
+          } catch (error) {
+            console.error(`Error fetching details for favId ${favId}:`, error);
           }
         }
-      }
-      setFavoritesDetails(details);
+        return null;
+      });
+
+      const resolvedDetails = (await Promise.all(promises)).filter((d): d is FavoriteDetail => d !== null);
+      setFavoritesDetails(resolvedDetails);
       setIsLoadingDetails(false);
     };
 
     fetchFavoriteDetails();
-  }, [clientProfile, firestore]);
+  }, [clientProfile, firestore, isProfileLoading]);
 
   const removeFavorite = (vendorId: string, serviceId: string) => {
     if (!clientProfileRef) return;
@@ -87,9 +102,9 @@ const MyFavsPage: NextPage = () => {
   }, [] as { vendor: Vendor; services: Service[] }[]);
 
 
-  if (isUserLoading || isProfileLoading || isLoadingDetails) {
+  if (isUserLoading || isProfileLoading || (isLoadingDetails && !clientProfile)) {
      return (
-      <div className="flex h-screen w-full items-center justify-center">
+      <div className="flex h-[70vh] w-full items-center justify-center">
         <RefreshCw className="h-10 w-10 animate-spin text-primary" />
       </div>
     );
