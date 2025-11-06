@@ -1,0 +1,122 @@
+/**
+ * @file Firebase Security Rules for Venue Vendors Firestore Database
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model for user-related data (Users, Clients, Vendors).
+ * Categories and Suggested Categories are publicly readable, but only users can create Suggested Categories.
+ *
+ * Data Structure:
+ * - /users/{userId}: Stores user profiles. Accessible only to the user themselves.
+ * - /users/{userId}/client: Stores client profiles. Accessible only to the user themselves.
+ * - /users/{userId}/vendor: Stores vendor profiles. Accessible only to the user themselves.
+ * - /categories/{categoryId}: Stores vendor categories. Publicly readable.
+ * - /suggested_categories/{suggestedCategoryId}: Stores user-submitted category suggestions. Publicly readable, owner-writeable.
+ *
+ * Key Security Decisions:
+ * - Users can only access their own data under the /users/{userId} path.
+ * - Public read access is granted to /categories/{categoryId}.
+ * - Public read access is granted to /suggested_categories/{suggestedCategoryId}, but write access is restricted to authenticated users.
+ *
+ * Denormalization for Authorization:
+ * - Vendor documents denormalize the userId to match the userId in the path (/users/{userId}/vendor).
+ *   This allows rules to directly validate ownership without additional reads.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Allows users to read and write their own user data.
+     * @path /users/{userId}
+     * @allow (get, create, update, delete) if request.auth.uid == userId
+     * @deny (get, create, update, delete) if request.auth.uid != userId
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId} {
+      function isOwner(userId) {
+        return request.auth != null && request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if false;
+
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+    
+
+      /**
+       * @description Allows a user to read and write their own client data.
+       * @path /users/{userId}/client
+       * @allow (get, create, update, delete) if request.auth.uid == userId
+       * @deny (get, create, update, delete) if request.auth.uid != userId
+       * @principle Enforces document ownership for writes, allows owner to read
+       */
+      match /client {
+        allow get: if isOwner(userId);
+        allow list: if false;
+
+        allow create: if isOwner(userId);
+        allow update: if isExistingOwner(userId);
+        allow delete: if isExistingOwner(userId);
+      }
+
+      /**
+       * @description Allows a user to read and write their own vendor data.
+       * @path /users/{userId}/vendor
+       * @allow (get, create, update, delete) if request.auth.uid == userId
+       * @deny (get, create, update, delete) if request.auth.uid != userId
+       * @principle Enforces document ownership for writes, allows owner to read
+       */
+      match /vendor {
+        allow get: if isOwner(userId);
+        allow list: if false;
+
+        allow create: if isOwner(userId) && request.resource.data.userId == userId;
+        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+        allow delete: if isExistingOwner(userId);
+      }
+    }
+
+    /**
+     * @description Allows anyone to read category data.
+     * @path /categories/{categoryId}
+     * @allow get, list: if true
+     * @deny create, update, delete: if false
+     * @principle Allows public read access, restricts write access.
+     */
+    match /categories/{categoryId} {
+      allow get: if true;
+      allow list: if true;
+
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Allows anyone to read suggested category data, but only signed-in users can create.
+     * @path /suggested_categories/{suggestedCategoryId}
+     * @allow get, list: if true
+     * @allow create: if request.auth != null
+     * @deny update, delete: if false
+     * @principle Allows public read access, restricts write access to authenticated users.
+     */
+    match /suggested_categories/{suggestedCategoryId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow get: if true;
+      allow list: if true;
+
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if false;
+      allow delete: if false;
+    }
+  }
+}

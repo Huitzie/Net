@@ -1,0 +1,267 @@
+{
+  "entities": {
+    "Vendor": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Vendor",
+      "type": "object",
+      "description": "Represents a vendor offering services.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Vendor entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:1 Vendor)"
+        },
+        "companyName": {
+          "type": "string",
+          "description": "The name of the vendor's company."
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief description of the vendor's services."
+        },
+        "state": {
+          "type": "string",
+          "description": "The state where the vendor operates."
+        },
+        "city": {
+          "type": "string",
+          "description": "The city where the vendor operates."
+        },
+        "categoryIds": {
+          "type": "array",
+          "description": "References to Categories offered by the vendor. (Relationship: Category N:N Vendor)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "photoUrls": {
+          "type": "array",
+          "description": "URLs of photos showcasing the vendor's services.",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "companyName",
+        "description",
+        "state",
+        "city"
+      ]
+    },
+    "Client": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Client",
+      "type": "object",
+      "description": "Represents a client who can browse and search for vendors.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Client entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:1 Client)"
+        },
+        "favoriteVendorIds": {
+          "type": "array",
+          "description": "References to Vendors added to the client's 'My Favs' list. (Relationship: Client 1:N Vendor)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "userId"
+      ]
+    },
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user account.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address.",
+          "format": "email"
+        },
+        "firstName": {
+          "type": "string",
+          "description": "The user's first name."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The user's last name."
+        },
+        "accountType": {
+          "type": "string",
+          "description": "The type of account (e.g., 'client', 'vendor')."
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "firstName",
+        "lastName",
+        "accountType"
+      ]
+    },
+    "Category": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Category",
+      "type": "object",
+      "description": "Represents a category of vendor services.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Category entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the category (e.g., 'Cake Makers', 'Mobile Bartenders')."
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the category."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description"
+      ]
+    },
+    "SuggestedCategory": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SuggestedCategory",
+      "type": "object",
+      "description": "Represents a suggested category submitted by a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the SuggestedCategory entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the suggested category."
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the suggested category."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User who suggested the category. (Relationship: User 1:N SuggestedCategory)"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description",
+        "userId"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user account information.  The 'userId' parameter is the Firebase Auth UID.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user, corresponding to their Firebase Auth UID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/client",
+        "definition": {
+          "entityName": "Client",
+          "schema": {
+            "$ref": "#/backend/entities/Client"
+          },
+          "description": "Stores client-specific data associated with a user.  Path-based ownership ensures only the user can modify their client profile.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user, corresponding to their Firebase Auth UID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/vendor",
+        "definition": {
+          "entityName": "Vendor",
+          "schema": {
+            "$ref": "#/backend/entities/Vendor"
+          },
+          "description": "Stores vendor-specific data associated with a user.  Path-based ownership ensures only the user can modify their vendor profile.  Denormalizes userId to ensure that vendor.userId matches userId in the path.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user, corresponding to their Firebase Auth UID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/categories/{categoryId}",
+        "definition": {
+          "entityName": "Category",
+          "schema": {
+            "$ref": "#/backend/entities/Category"
+          },
+          "description": "Stores categories of vendor services.",
+          "params": [
+            {
+              "name": "categoryId",
+              "description": "The unique identifier for the category."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/suggested_categories/{suggestedCategoryId}",
+        "definition": {
+          "entityName": "SuggestedCategory",
+          "schema": {
+            "$ref": "#/backend/entities/SuggestedCategory"
+          },
+          "description": "Stores user-submitted category suggestions.",
+          "params": [
+            {
+              "name": "suggestedCategoryId",
+              "description": "The unique identifier for the suggested category."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to support Venue Vendors, a platform connecting clients with vendors for various services. It prioritizes authorization independence and efficient data retrieval. Key aspects include:\n\n1.  **User-Centric Data:** User data (User, Client, Vendor) is stored under `/users/{userId}` to leverage path-based authorization.\n2.  **Authorization Independence:**\n    *   The `Vendor` documents are stored as subcollections of users to support the `User 1:1 Vendor` relationship, so the vendor documents' security rules can enforce that the `vendor.userId` matches the `userId` in the path. This avoids the need for `get()` calls to authorize based on parent data.\n3.  **Vendor and Category Relationships:** Vendor-Category relationships are managed through the `categoryIds` array in the Vendor document. This is adequate since only vendors should be able to change their categories.\n4.  **Suggested Categories:** Suggested categories are stored in `/suggested_categories`.\n5.  **Scalable List Operations (QAPs):**\n    *   The structure enables secure list operations because it is organized with homogeneous security postures. Each collection clearly defines its access rules based on user roles and ownership.\n    *   Specifically, the design supports listing vendors by category, city, and state without complex filtering in security rules.\n\n"
+  }
+}
