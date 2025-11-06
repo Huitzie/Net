@@ -20,7 +20,8 @@ import { ArrowLeft, PlusCircle, UploadCloud, Trash2 } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useUser, useFirestore, addDocumentNonBlocking } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, doc, updateDoc } from 'firebase/firestore';
+import { uploadFile } from '@/firebase/storage';
 
 
 const MAX_FILE_SIZE_MB = 5;
@@ -45,8 +46,7 @@ const serviceFormSchema = z.object({
     .refine(
       (files) => Array.from(files).every((file) => file.type.startsWith("image/")),
       { message: "Only image files are allowed (e.g., JPG, PNG, GIF)." }
-    )
-    .optional(), // Keep optional here as FileList might not exist on initial render or if no files chosen
+    ),
   priceRange: z.string().max(50, { message: "Price range too long." }).optional(),
 });
 
@@ -66,7 +66,6 @@ const AddNewServicePage: NextPage = () => {
       name: '',
       description: '',
       category: '',
-      photos: undefined,
       priceRange: '',
     },
   });
@@ -86,11 +85,11 @@ const AddNewServicePage: NextPage = () => {
   const handlePhotoFiles = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files) {
-      form.setValue("photos", files, { shouldValidate: true }); // Update RHF
+      form.setValue("photos", files, { shouldValidate: true });
       const previews = Array.from(files).map(file => URL.createObjectURL(file));
       setPhotoPreviews(previews);
     } else {
-      form.setValue("photos", undefined); // Clear if no files selected
+      form.setValue("photos", undefined, { shouldValidate: true });
       setPhotoPreviews([]);
     }
   };
@@ -100,10 +99,9 @@ const AddNewServicePage: NextPage = () => {
     const currentFiles = form.getValues("photos");
     if (currentFiles) {
       const updatedFilesArray = Array.from(currentFiles).filter((_, i) => i !== index);
-      // Create a new FileList
       const dataTransfer = new DataTransfer();
       updatedFilesArray.forEach(file => dataTransfer.items.add(file));
-      form.setValue("photos", dataTransfer.files.length > 0 ? dataTransfer.files : undefined, { shouldValidate: true });
+      form.setValue("photos", dataTransfer.files, { shouldValidate: true });
     }
   };
 
@@ -118,28 +116,44 @@ const AddNewServicePage: NextPage = () => {
         return;
     }
 
-    // This is a placeholder. In a real app, you'd upload files to Firebase Storage
-    // and get their download URLs.
-    const photoUrls = photoPreviews;
+    try {
+      const servicesCollectionRef = collection(firestore, 'vendors', user.uid, 'services');
+      const newServiceRef = doc(servicesCollectionRef); // Create a new doc with a generated ID
+      const serviceId = newServiceRef.id;
 
-    const newService: Omit<Service, 'id'> = { 
-      name: data.name,
-      description: data.description,
-      category: data.category,
-      photos: photoUrls,
-      priceRange: data.priceRange,
-    };
-    
-    const servicesCollectionRef = collection(firestore, 'vendors', user.uid, 'services');
-    await addDocumentNonBlocking(servicesCollectionRef, newService);
+      const uploadPromises = Array.from(data.photos).map((file) => {
+          const path = `vendors/${user.uid}/services/${serviceId}/${file.name}`;
+          return uploadFile(file, path);
+      });
 
-    toast({
-      title: 'Service Added!',
-      description: `The service "${data.name}" has been successfully added.`,
-    });
-    form.reset();
-    setPhotoPreviews([]);
-    router.push('/dashboard/vendor/services');
+      const photoUrls = await Promise.all(uploadPromises);
+
+      const newService: Service = { 
+        id: serviceId,
+        name: data.name,
+        description: data.description,
+        category: data.category,
+        photos: photoUrls,
+        priceRange: data.priceRange,
+      };
+      
+      await setDocumentNonBlocking(newServiceRef, newService, {});
+
+      toast({
+        title: 'Service Added!',
+        description: `The service "${data.name}" has been successfully added.`,
+      });
+      form.reset();
+      setPhotoPreviews([]);
+      router.push('/dashboard/vendor/services');
+    } catch(error) {
+      console.error("Failed to add service:", error);
+      toast({
+        title: "Upload Failed",
+        description: "There was an error creating your service. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -204,7 +218,7 @@ const AddNewServicePage: NextPage = () => {
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select a category for your service" />
-                        </SelectTrigger>
+                        </Trigger>
                       </FormControl>
                       <SelectContent>
                         {categories.map((category) => (
@@ -231,6 +245,7 @@ const AddNewServicePage: NextPage = () => {
                         <Input
                           type="file"
                           multiple
+                          accept="image/*"
                           onChange={handlePhotoFiles}
                           className="flex-grow text-sm file:mr-2 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
                         />
@@ -296,5 +311,3 @@ const AddNewServicePage: NextPage = () => {
 };
 
 export default AddNewServicePage;
-
-    

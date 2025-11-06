@@ -21,6 +21,7 @@ import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useUser, useFirestore, useDoc, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
+import { uploadFile, deleteFileFromUrl } from '@/firebase/storage';
 
 
 const MAX_FILE_SIZE_MB = 5;
@@ -30,11 +31,11 @@ const serviceFormSchema = z.object({
   name: z.string().min(3, { message: "Service name must be at least 3 characters." }).max(100, { message: "Service name too long." }),
   description: z.string().min(10, { message: "Description must be at least 10 characters." }).max(1000, { message: "Description too long." }),
   category: z.string({ required_error: "Please select a category." }).min(1, { message: "Please select a category." }),
-  photos: z
+  newPhotos: z
     .custom<FileList>((val) => val instanceof FileList, "Expected a list of files.")
-    .optional() // Make FileList optional for cases where only existing photos are kept
+    .optional()
     .refine(
-      (files) => !files || files.length <= MAX_TOTAL_FILES, // Apply only if files exist
+      (files) => !files || files.length <= MAX_TOTAL_FILES,
       { message: `You can upload a maximum of ${MAX_TOTAL_FILES} new photos.` }
     )
     .refine(
@@ -67,6 +68,7 @@ const EditServicePage: NextPage = () => {
   const { data: serviceData, isLoading: isServiceLoading } = useDoc<Service>(serviceDocRef);
   
   const [existingPhotos, setExistingPhotos] = useState<string[]>([]);
+  const [photosToRemove, setPhotosToRemove] = useState<string[]>([]); // URLs of existing photos to delete
   const [newPhotoPreviews, setNewPhotoPreviews] = useState<string[]>([]);
   const isLoading = isAuthLoading || isServiceLoading;
 
@@ -76,10 +78,12 @@ const EditServicePage: NextPage = () => {
       name: '',
       description: '',
       category: '',
-      photos: undefined,
+      newPhotos: undefined,
       priceRange: '',
     },
   });
+  
+  const totalPhotoCount = existingPhotos.length + (form.watch("newPhotos")?.length || 0);
 
   useEffect(() => {
     if (serviceData) {
@@ -88,7 +92,7 @@ const EditServicePage: NextPage = () => {
         description: serviceData.description,
         category: serviceData.category,
         priceRange: serviceData.priceRange || '',
-        photos: undefined,
+        newPhotos: undefined,
       });
       setExistingPhotos(serviceData.photos || []);
     }
@@ -97,51 +101,85 @@ const EditServicePage: NextPage = () => {
   const handleNewPhotoFiles = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files) {
-      form.setValue("photos", files, { shouldValidate: true });
+      if ((existingPhotos.length + files.length) > MAX_TOTAL_FILES) {
+          toast({ title: "Too many photos", description: `You can only have ${MAX_TOTAL_FILES} photos in total.`, variant: "destructive"});
+          return;
+      }
+      form.setValue("newPhotos", files, { shouldValidate: true });
       const previews = Array.from(files).map(file => URL.createObjectURL(file));
       setNewPhotoPreviews(previews);
     }
   };
 
   const removeExistingPhoto = (index: number) => {
+    const photoToRemove = existingPhotos[index];
+    setPhotosToRemove(prev => [...prev, photoToRemove]);
     setExistingPhotos(prev => prev.filter((_, i) => i !== index));
   };
   
   const removeNewPhotoPreview = (index: number) => {
     setNewPhotoPreviews(prev => prev.filter((_, i) => i !== index));
-    const currentFiles = form.getValues("photos");
+    const currentFiles = form.getValues("newPhotos");
     if (currentFiles) {
       const updatedFilesArray = Array.from(currentFiles).filter((_, i) => i !== index);
       const dataTransfer = new DataTransfer();
       updatedFilesArray.forEach(file => dataTransfer.items.add(file));
-      form.setValue("photos", dataTransfer.files.length > 0 ? dataTransfer.files : undefined);
+      form.setValue("newPhotos", dataTransfer.files, { shouldValidate: true });
     }
   };
 
   const onSubmit = async (data: ServiceFormValues) => {
     if (!user?.uid || !serviceId || !serviceDocRef) return;
-
-    // In a real app, upload new files to Firebase Storage and get their URLs.
-    // This is a placeholder implementation.
-    const newPhotoUrls = newPhotoPreviews; // Pretend these are uploaded URLs.
     
-    const finalPhotoUrls = [...existingPhotos, ...newPhotoUrls];
+    if (totalPhotoCount === 0) {
+        form.setError("newPhotos", { type: "manual", message: "A service must have at least one photo." });
+        return;
+    }
 
-    const updatedServiceData = {
-      name: data.name,
-      description: data.description,
-      category: data.category,
-      photos: finalPhotoUrls,
-      priceRange: data.priceRange,
-    };
-    
-    updateDocumentNonBlocking(serviceDocRef, updatedServiceData);
+    try {
+        // 1. Upload new photos
+        const newPhotoUrls: string[] = [];
+        if (data.newPhotos && data.newPhotos.length > 0) {
+            const uploadPromises = Array.from(data.newPhotos).map(file => {
+                const path = `vendors/${user.uid}/services/${serviceId}/${file.name}`;
+                return uploadFile(file, path);
+            });
+            const uploadedUrls = await Promise.all(uploadPromises);
+            newPhotoUrls.push(...uploadedUrls);
+        }
 
-    toast({
-      title: 'Service Updated!',
-      description: `The service "${data.name}" has been successfully updated.`,
-    });
-    router.push('/dashboard/vendor/services');
+        // 2. Delete photos marked for removal
+        if (photosToRemove.length > 0) {
+            const deletePromises = photosToRemove.map(url => deleteFileFromUrl(url));
+            await Promise.all(deletePromises);
+        }
+
+        // 3. Construct final photo array
+        const finalPhotoUrls = [...existingPhotos, ...newPhotoUrls];
+
+        const updatedServiceData = {
+          name: data.name,
+          description: data.description,
+          category: data.category,
+          photos: finalPhotoUrls,
+          priceRange: data.priceRange,
+        };
+        
+        updateDocumentNonBlocking(serviceDocRef, updatedServiceData);
+
+        toast({
+          title: 'Service Updated!',
+          description: `The service "${data.name}" has been successfully updated.`,
+        });
+        router.push('/dashboard/vendor/services');
+    } catch(error) {
+       console.error("Error updating service:", error);
+       toast({
+        title: "Update Failed",
+        description: "An error occurred while updating the service. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (!user && !isAuthLoading) {
@@ -228,7 +266,7 @@ const EditServicePage: NextPage = () => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Category</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger>
                       </FormControl>
@@ -264,33 +302,31 @@ const EditServicePage: NextPage = () => {
                       </div>
                     ))}
                   </div>
-                  <FormDescription>These are the photos currently associated with this service. Click trash to remove.</FormDescription>
+                  <FormDescription>Click trash icon to remove an existing photo.</FormDescription>
                 </FormItem>
               )}
 
               {/* New Photo Uploads */}
               <FormField
                 control={form.control}
-                name="photos"
-                render={({ field: { onChange, value, ...restField }, fieldState }) => (
+                name="newPhotos"
+                render={({ fieldState }) => (
                   <FormItem>
-                    <FormLabel>Add or Replace Photos</FormLabel>
+                    <FormLabel>Add New Photos</FormLabel>
                      <FormControl>
                       <div className="flex items-center space-x-2">
                         <Input
                           type="file"
                           multiple
-                          onChange={handleNewPhotoFiles} // Use custom handler
+                          accept="image/*"
+                          onChange={handleNewPhotoFiles}
                           className="flex-grow text-sm file:mr-2 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
                         />
                          <UploadCloud className="h-6 w-6 text-muted-foreground" />
                       </div>
                     </FormControl>
                     <FormDescription>
-                      Upload new images to add or replace existing ones (max {MAX_TOTAL_FILES} files, {MAX_FILE_SIZE_MB}MB each).
-                      { (existingPhotos.length + (form.getValues("photos")?.length || 0)) > MAX_TOTAL_FILES && 
-                        <span className="text-destructive block"> Total photos (existing + new) cannot exceed {MAX_TOTAL_FILES}.</span>
-                      }
+                      Total photos (existing + new) cannot exceed {MAX_TOTAL_FILES}. Each file max {MAX_FILE_SIZE_MB}MB.
                     </FormDescription>
                     {newPhotoPreviews.length > 0 && (
                       <div className="mt-3 space-y-2">
@@ -333,7 +369,7 @@ const EditServicePage: NextPage = () => {
               />
 
               <div className="flex justify-end pt-4">
-                <Button type="submit" className="bg-accent hover:bg-accent/90" disabled={form.formState.isSubmitting || ((existingPhotos.length + (form.getValues("photos")?.length || 0)) > MAX_TOTAL_FILES)}>
+                <Button type="submit" className="bg-accent hover:bg-accent/90" disabled={form.formState.isSubmitting || totalPhotoCount > MAX_TOTAL_FILES}>
                   <Save className="mr-2 h-4 w-4" /> Save Changes
                 </Button>
               </div>
@@ -346,5 +382,3 @@ const EditServicePage: NextPage = () => {
 };
 
 export default EditServicePage;
-
-    

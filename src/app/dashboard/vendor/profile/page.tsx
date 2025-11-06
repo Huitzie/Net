@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -17,9 +17,13 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { getStates, getCitiesByState } from '@/services/geo';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Save, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Save, RefreshCw, UploadCloud } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import type { Vendor } from '@/types';
+import Image from 'next/image';
+import { uploadFile } from '@/firebase/storage';
+
+const MAX_FILE_SIZE_MB = 5;
 
 const profileFormSchema = z.object({
   name: z.string().min(2, { message: "Company name must be at least 2 characters." }),
@@ -27,6 +31,12 @@ const profileFormSchema = z.object({
   description: z.string().min(20, { message: "Description must be at least 20 characters." }),
   state: z.string().min(1, { message: "Please select a state." }),
   city: z.string().min(1, { message: "Please select a city." }),
+  profileImageFile: z.custom<FileList>().optional()
+    .refine((files) => !files || files?.[0]?.size <= MAX_FILE_SIZE_MB * 1024 * 1024, `Profile image must be ${MAX_FILE_SIZE_MB}MB or less.`)
+    .refine((files) => !files || files?.[0]?.type.startsWith("image/"), "Profile image must be an image file."),
+  bannerImageFile: z.custom<FileList>().optional()
+    .refine((files) => !files || files?.[0]?.size <= MAX_FILE_SIZE_MB * 1024 * 1024, `Banner image must be ${MAX_FILE_SIZE_MB}MB or less.`)
+    .refine((files) => !files || files?.[0]?.type.startsWith("image/"), "Banner image must be an image file."),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -46,6 +56,8 @@ const VendorProfileSetupPage: NextPage = () => {
 
   const [states, setStates] = useState<string[]>([]);
   const [cities, setCities] = useState<{ city: string }[]>([]);
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
+  const [bannerImagePreview, setBannerImagePreview] = useState<string | null>(null);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -82,30 +94,63 @@ const VendorProfileSetupPage: NextPage = () => {
         state: vendorData.state,
         city: vendorData.city,
       });
+      if(vendorData.profileImage) setProfileImagePreview(vendorData.profileImage);
+      if(vendorData.bannerImage) setBannerImagePreview(vendorData.bannerImage);
     }
   }, [vendorData, form]);
 
   const onSubmit = async (data: ProfileFormValues) => {
     if (!user || !vendorRef) return;
+    
+    form.clearErrors(); // Clear previous errors
 
-    const profileData: Partial<Vendor> = {
-      ...data,
-      id: user.uid,
-      slug: data.name.toLowerCase().replace(/\s+/g, '-'),
-      // In a real app, you would upload images and get URLs here
-      profileImage: vendorData?.profileImage || `https://picsum.photos/seed/${user.uid}/400/300`,
-      bannerImage: vendorData?.bannerImage || `https://picsum.photos/seed/${user.uid}banner/1200/400`,
-      contactEmail: user.email,
-    };
+    try {
+        let profileImageUrl = vendorData?.profileImage || `https://picsum.photos/seed/${user.uid}/400/300`;
+        let bannerImageUrl = vendorData?.bannerImage || `https://picsum.photos/seed/${user.uid}banner/1200/400`;
 
-    setDocumentNonBlocking(vendorRef, profileData, { merge: true });
+        // Upload profile image if a new one is selected
+        if (data.profileImageFile && data.profileImageFile.length > 0) {
+            const file = data.profileImageFile[0];
+            const path = `vendors/${user.uid}/profile-image-${file.name}`;
+            profileImageUrl = await uploadFile(file, path);
+        }
 
-    toast({
-      title: "Profile Saved",
-      description: "Your public vendor profile has been updated.",
-    });
+        // Upload banner image if a new one is selected
+        if (data.bannerImageFile && data.bannerImageFile.length > 0) {
+            const file = data.bannerImageFile[0];
+            const path = `vendors/${user.uid}/banner-image-${file.name}`;
+            bannerImageUrl = await uploadFile(file, path);
+        }
 
-    router.push('/dashboard/vendor');
+        const profileData: Partial<Vendor> = {
+            name: data.name,
+            tagline: data.tagline,
+            description: data.description,
+            state: data.state,
+            city: data.city,
+            id: user.uid,
+            slug: data.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+            profileImage: profileImageUrl,
+            bannerImage: bannerImageUrl,
+            contactEmail: user.email,
+        };
+
+        setDocumentNonBlocking(vendorRef, profileData, { merge: true });
+
+        toast({
+            title: "Profile Saved",
+            description: "Your public vendor profile has been updated.",
+        });
+
+        router.push('/dashboard/vendor');
+    } catch(error) {
+        console.error("Error saving profile:", error);
+        toast({
+            title: "Upload Failed",
+            description: "There was a problem uploading your images. Please try again.",
+            variant: "destructive",
+        });
+    }
   };
 
   if (isUserLoading || isVendorLoading) {
@@ -120,6 +165,18 @@ const VendorProfileSetupPage: NextPage = () => {
     router.replace('/login?redirect=/dashboard/vendor/profile');
     return null;
   }
+  
+  const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) setProfileImagePreview(URL.createObjectURL(file));
+      form.setValue('profileImageFile', e.target.files!);
+  };
+
+  const handleBannerImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) setBannerImagePreview(URL.createObjectURL(file));
+      form.setValue('bannerImageFile', e.target.files!);
+  };
 
   return (
     <div className="container mx-auto max-w-4xl py-8 px-4 md:px-6">
@@ -140,8 +197,8 @@ const VendorProfileSetupPage: NextPage = () => {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+               <FormField
                 control={form.control}
                 name="name"
                 render={({ field }) => (
@@ -167,6 +224,48 @@ const VendorProfileSetupPage: NextPage = () => {
                   </FormItem>
                 )}
               />
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                 <FormField
+                    control={form.control}
+                    name="profileImageFile"
+                    render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Profile Picture</FormLabel>
+                        {profileImagePreview && (
+                            <div className="relative w-48 h-48 rounded-lg overflow-hidden border-2 border-dashed">
+                                <Image src={profileImagePreview} alt="Profile preview" fill style={{objectFit: 'cover'}} />
+                            </div>
+                        )}
+                      <FormControl>
+                        <Input type="file" onChange={handleProfileImageChange} accept="image/*" />
+                      </FormControl>
+                      <FormDescription>A square image for your main profile. (Max {MAX_FILE_SIZE_MB}MB)</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                 />
+                <FormField
+                    control={form.control}
+                    name="bannerImageFile"
+                    render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Banner Image</FormLabel>
+                        {bannerImagePreview && (
+                            <div className="relative w-full h-48 rounded-lg overflow-hidden border-2 border-dashed">
+                                <Image src={bannerImagePreview} alt="Banner preview" fill style={{objectFit: 'cover'}} />
+                            </div>
+                        )}
+                      <FormControl>
+                        <Input type="file" onChange={handleBannerImageChange} accept="image/*" />
+                      </FormControl>
+                      <FormDescription>A wide banner for your profile page. (Max {MAX_FILE_SIZE_MB}MB)</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                 />
+              </div>
+
               <FormField
                 control={form.control}
                 name="description"
