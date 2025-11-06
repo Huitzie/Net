@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { MapPin, Users } from 'lucide-react'; // Removed Star, will use StarRating
-import { getCategoryByName } from '@/data/categories';
+import { getCategoryById } from '@/data/categories';
 import StarRating from '@/components/ui/star-rating'; // Added StarRating import
 
 interface VendorCardProps {
@@ -13,7 +13,8 @@ interface VendorCardProps {
 }
 
 const VendorCard: React.FC<VendorCardProps> = ({ vendor }) => {
-  const primaryCategory = vendor.categories.length > 0 ? getCategoryByName(vendor.categories[0]) : null;
+  const primaryCategoryId = vendor.categoryIds && vendor.categoryIds.length > 0 ? vendor.categoryIds[0] : null;
+  const primaryCategory = primaryCategoryId ? getCategoryById(primaryCategoryId) : null;
   const IconComponent = primaryCategory?.icon || Users;
 
   return (
@@ -54,11 +55,12 @@ const VendorCard: React.FC<VendorCardProps> = ({ vendor }) => {
             )}
           </CardContent>
           <CardFooter className="pt-2 flex flex-wrap gap-1">
-            {vendor.categories.slice(0, 2).map((catName) => (
-              <Badge key={catName} variant="secondary" className="text-xs">{catName}</Badge>
-            ))}
-            {vendor.categories.length > 2 && (
-              <Badge variant="secondary" className="text-xs">+{vendor.categories.length - 2} more</Badge>
+             {vendor.categoryIds && vendor.categoryIds.slice(0, 2).map((catId) => {
+                const category = getCategoryById(catId);
+                return category ? <Badge key={catId} variant="secondary" className="text-xs">{category.name}</Badge> : null;
+             })}
+            {vendor.categoryIds && vendor.categoryIds.length > 2 && (
+              <Badge variant="secondary" className="text-xs">+{vendor.categoryIds.length - 2} more</Badge>
             )}
           </CardFooter>
         </Card>

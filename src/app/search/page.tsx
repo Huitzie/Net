@@ -1,33 +1,115 @@
 
-import type { NextPage, Metadata } from 'next';
-import { Suspense } from 'react';
+'use client';
+
+import type { NextPage } from 'next';
+import { Suspense, useState, useEffect } from 'react';
 import SearchForm from '@/components/search/search-form';
 import VendorCard from '@/components/vendors/vendor-card';
-import { searchVendors as performSearchVendors } from '@/data/vendors'; 
 import { getCategoryById } from '@/data/categories';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, Share2, Sparkles, Info } from 'lucide-react';
+import { AlertTriangle, Share2, Sparkles, Info, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useSearchParams } from 'next/navigation';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where, getDocs, limit, startAfter, DocumentData, Query } from 'firebase/firestore';
+import type { Vendor } from '@/types';
 
 
-export const metadata: Metadata = {
-  title: 'Search Vendors | Venue Vendors',
-  description: 'Find the perfect vendors for your event.',
-};
+const VENDOR_PAGE_SIZE = 20;
 
-interface SearchPageProps {
-  searchParams: {
-    state?: string;
-    city?: string;
-    category?: string;
-    keyword?: string;
-  };
-}
+const SearchResults = () => {
+  const firestore = useFirestore();
+  const searchParams = useSearchParams();
 
-const SearchResults = async ({ searchParams }: SearchPageProps) => {
-  const { state, city, category: categoryId, keyword } = searchParams;
+  const state = searchParams.get('state');
+  const city = searchParams.get('city');
+  const categoryId = searchParams.get('category');
+  const keyword = searchParams.get('keyword');
+
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [lastVisible, setLastVisible] = useState<DocumentData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(true);
+
+  const initialQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    let q: Query<DocumentData> = collection(firestore, 'vendors');
+    if (state) q = query(q, where('state', '==', state));
+    if (city) q = query(q, where('city', '==', city));
+    if (categoryId) q = query(q, where('categoryIds', 'array-contains', categoryId));
+    // Firestore doesn't support complex text search on multiple fields out of the box.
+    // Keyword search requires a dedicated search service like Algolia or Elasticsearch.
+    // We will filter by keyword on the client side for this basic implementation.
+    return query(q, limit(VENDOR_PAGE_SIZE));
+  }, [firestore, state, city, categoryId]);
+
+  useEffect(() => {
+    if (!initialQuery) return;
+    setIsLoading(true);
+    setVendors([]);
+    setLastVisible(null);
+    setHasMore(true);
+
+    const loadInitialVendors = async () => {
+      try {
+        const documentSnapshots = await getDocs(initialQuery);
+        const fetchedVendors: Vendor[] = [];
+        documentSnapshots.forEach((doc) => {
+          fetchedVendors.push({ id: doc.id, ...doc.data() } as Vendor);
+        });
+
+        const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+        setLastVisible(lastDoc);
+        setVendors(fetchedVendors);
+        setHasMore(fetchedVendors.length === VENDOR_PAGE_SIZE);
+
+      } catch (error) {
+        console.error("Error fetching vendors:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadInitialVendors();
+  }, [initialQuery]);
+
+  const loadMoreVendors = async () => {
+    if (!initialQuery || !lastVisible || !hasMore) return;
+    setIsLoading(true);
+    
+    let q = query(initialQuery, startAfter(lastVisible), limit(VENDOR_PAGE_SIZE));
+
+    try {
+      const documentSnapshots = await getDocs(q);
+      const newVendors: Vendor[] = [];
+      documentSnapshots.forEach((doc) => {
+        newVendors.push({ id: doc.id, ...doc.data() } as Vendor);
+      });
+      
+      const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+      setLastVisible(lastDoc);
+      setVendors(prev => [...prev, ...newVendors]);
+      setHasMore(newVendors.length === VENDOR_PAGE_SIZE);
+    } catch (error) {
+        console.error("Error fetching more vendors:", error);
+    } finally {
+        setIsLoading(false);
+    }
+  }
+
+  // Client-side keyword filtering
+  const displayedVendors = useMemo(() => {
+    if (!keyword) return vendors;
+    const keywordLower = keyword.toLowerCase();
+    return vendors.filter(v => 
+      v.name.toLowerCase().includes(keywordLower) ||
+      v.description.toLowerCase().includes(keywordLower) ||
+      (v.tagline && v.tagline.toLowerCase().includes(keywordLower)) ||
+      (v.categoryIds && v.categoryIds.some(catId => catId.toLowerCase().includes(keywordLower)))
+    );
+  }, [vendors, keyword]);
+
 
   if (!state || !city) {
     return (
@@ -38,15 +120,15 @@ const SearchResults = async ({ searchParams }: SearchPageProps) => {
       </div>
     );
   }
-  
-  // Perform search without initial limit to check total count
-  const allMatchingVendors = await performSearchVendors({ state, city, categoryId, keyword });
-  const vendors = allMatchingVendors.slice(0, 10); // Then take the first 10 for display
-  const totalFound = allMatchingVendors.length;
 
   const category = categoryId ? getCategoryById(categoryId) : null;
+  const totalFound = displayedVendors.length;
 
-  if (vendors.length === 0) {
+  if (isLoading && totalFound === 0) {
+      return <LoadingResults />;
+  }
+
+  if (totalFound === 0 && !isLoading) {
     const categoryName = category ? category.name : "this type of";
     const shareText = `Looking for a ${categoryName} vendor in ${city}, ${state}? Venue Vendors needs you! If you provide this service, sign up to get hired: ${process.env.NEXT_PUBLIC_APP_URL || 'https://venuevendors.example.com'}/signup?type=vendor`;
     const twitterShareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
@@ -93,31 +175,27 @@ const SearchResults = async ({ searchParams }: SearchPageProps) => {
   return (
     <div>
       <h2 className="text-2xl font-semibold mb-6">
-        Showing {vendors.length > 1 ? `${vendors.length} ` : ''}{category ? `${category.name} ` : ''}Vendors in {city}, {state}
+        Showing {totalFound} {category ? `${category.name} ` : ''}Vendors in {city}, {state}
         {keyword && ` matching "${keyword}"`}
       </h2>
-      {totalFound > 10 && (
-        <Alert className="mb-6">
-          <Info className="h-4 w-4" />
-          <AlertTitle>More Results Available</AlertTitle>
-          <AlertDescription>
-            We found {totalFound} vendors matching your criteria. Displaying the top 10. Future updates may include pagination to view all results.
-          </AlertDescription>
-        </Alert>
-      )}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {vendors.map((vendor) => (
+        {displayedVendors.map((vendor) => (
           <VendorCard key={vendor.id} vendor={vendor} />
         ))}
       </div>
+      {hasMore && (
+        <div className="mt-8 text-center">
+            <Button onClick={loadMoreVendors} disabled={isLoading}>
+                {isLoading ? <><RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Loading...</> : 'Load More Vendors'}
+            </Button>
+        </div>
+      )}
     </div>
   );
 };
 
 
-const SearchPage: NextPage<SearchPageProps> = ({ searchParams }) => {
-  const { state, city, category: categoryId, keyword } = searchParams;
-
+const SearchPage: NextPage = () => {
   return (
     <div className="container mx-auto py-8 px-4 md:px-6">
       <div className="mb-8">
@@ -125,20 +203,42 @@ const SearchPage: NextPage<SearchPageProps> = ({ searchParams }) => {
         <p className="text-muted-foreground mb-6 text-center md:text-left">
           Use the filters below to discover amazing vendors for your event.
         </p>
-        <SearchForm initialValues={{ state, city, category: categoryId, keyword }} />
+        <Suspense fallback={<LoadingSearchForm />}>
+          <SearchFormWrapper />
+        </Suspense>
       </div>
       <Suspense fallback={<LoadingResults />}>
-        <SearchResults searchParams={searchParams} />
+        <SearchResults />
       </Suspense>
     </div>
   );
 };
 
+const SearchFormWrapper = () => {
+  const searchParams = useSearchParams();
+  const state = searchParams.get('state') ?? undefined;
+  const city = searchParams.get('city') ?? undefined;
+  const category = searchParams.get('category') ?? undefined;
+  const keyword = searchParams.get('keyword') ?? undefined;
+
+  return <SearchForm initialValues={{ state, city, category, keyword }} />;
+};
+
+const LoadingSearchForm = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end p-4 bg-card shadow-lg rounded-lg border">
+        <div className="h-10 bg-muted rounded animate-pulse"></div>
+        <div className="h-10 bg-muted rounded animate-pulse"></div>
+        <div className="h-10 bg-muted rounded animate-pulse"></div>
+        <div className="h-10 bg-muted rounded animate-pulse"></div>
+    </div>
+);
+
+
 const LoadingResults = () => (
   <div className="space-y-4">
     <div className="h-8 bg-muted rounded w-1/2 animate-pulse"></div>
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {[1, 2, 3].map(i => (
+      {[1, 2, 3, 4, 5, 6].map(i => (
         <Card key={i} className="animate-pulse">
           <div className="h-48 bg-muted rounded-t-lg"></div>
           <CardContent className="p-4 space-y-3">

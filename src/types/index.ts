@@ -32,10 +32,7 @@ export interface Vendor {
   description: string;
   state: string;
   city: string;
-  categories: string[]; // array of category names. Should be updated based on services.
   categoryIds?: string[]; // array of category IDs.
-  services?: Service[]; // Kept for local display, but services are now a subcollection
-  reviews?: Review[]; // Kept for local display, reviews could be a subcollection
   profileImage: string; // URL
   bannerImage?: string; // URL
   rating?: number;
