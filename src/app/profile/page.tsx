@@ -1,7 +1,8 @@
 
 "use client";
 import type { NextPage } from 'next';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -12,11 +13,18 @@ import Link from 'next/link';
 
 const UserProfilePage: NextPage = () => {
   const { user, isUserLoading } = useUser();
-  
-  // TODO: Fetch user profile from Firestore to get accountType
-  const accountType = 'client'; // Placeholder
+  const firestore = useFirestore();
 
-  if (isUserLoading) {
+  const userProfileRef = useMemoFirebase(() => {
+      if (!firestore || !user?.uid) return null;
+      return doc(firestore, 'users', user.uid);
+  }, [firestore, user?.uid]);
+
+  const {data: userProfile, isLoading: isProfileLoading} = useDoc<{accountType: 'client' | 'vendor'}>(userProfileRef);
+  
+  const isLoading = isUserLoading || isProfileLoading;
+
+  if (isLoading) {
     return (
         <div className="container mx-auto py-8 px-4 md:px-6">
           <div className="flex justify-center items-center min-h-[60vh]">
@@ -39,13 +47,19 @@ const UserProfilePage: NextPage = () => {
     );
   }
 
+  const accountType = userProfile?.accountType;
+
   return (
     <div className="container mx-auto py-8 px-4 md:px-6">
       <div className="flex flex-col md:flex-row items-center justify-between mb-8">
         <h1 className="text-3xl md:text-4xl font-bold">My Profile</h1>
-        <Button variant="outline" disabled> {/*  onClick={() => {}} */}
-          <Edit3 className="mr-2 h-4 w-4" /> Edit Profile
-        </Button>
+         {accountType === 'vendor' && (
+            <Button variant="outline" asChild>
+              <Link href="/dashboard/vendor/profile">
+                <Edit3 className="mr-2 h-4 w-4" /> Edit Vendor Profile
+              </Link>
+            </Button>
+          )}
       </div>
 
       <Card className="w-full max-w-2xl mx-auto shadow-lg">
@@ -69,7 +83,6 @@ const UserProfilePage: NextPage = () => {
             <Input id="email" type="email" value={user.email || ""} readOnly disabled />
           </div>
           
-          {/* Placeholder for more profile fields */}
           <div className="pt-4 border-t">
             <h3 className="text-lg font-semibold mb-2">Account Settings</h3>
             <Button variant="link" className="p-0 h-auto text-primary" disabled>Change Password</Button><br/>

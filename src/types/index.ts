@@ -25,16 +25,17 @@ export interface Review {
 }
 
 export interface Vendor {
-  id: string;
+  id: string; // Same as User UID
   name: string;
   slug: string;
   tagline?: string;
   description: string;
   state: string;
   city: string;
-  categories: string[]; // array of category names
-  services: Service[];
-  reviews?: Review[];
+  categories: string[]; // array of category names. Should be updated based on services.
+  categoryIds?: string[]; // array of category IDs.
+  services?: Service[]; // Kept for local display, but services are now a subcollection
+  reviews?: Review[]; // Kept for local display, reviews could be a subcollection
   profileImage: string; // URL
   bannerImage?: string; // URL
   rating?: number;
@@ -47,17 +48,20 @@ export interface Vendor {
 export type UserAccountType = 'client' | 'vendor';
 
 export interface User {
-  uid: string;
-  name: string | null;
+  id: string;
   email: string | null;
-  photoURL: string | null;
+  firstName: string;
+  lastName: string;
   accountType: UserAccountType;
+  createdAt: any; // Firestore Timestamp
 }
 
-export interface ClientProfile extends User {
-  favoriteVendorIds: string[];
+export interface ClientProfile {
+  // Composite key: 'vendorId_serviceId'
+  favoriteVendorIds?: string[];
 }
 
-export interface VendorProfile extends User {
-  vendorDetailsId: string; // Link to Vendor data
-}
+// No longer needed as we are not creating a separate vendor profile document
+// export interface VendorProfile extends User {
+//   vendorDetailsId: string; // Link to Vendor data
+// }

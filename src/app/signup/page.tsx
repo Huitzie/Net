@@ -21,7 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { UserAccountType } from "@/types";
 import { useEffect } from "react";
 import { useAuth, setDocumentNonBlocking } from "@/firebase";
-import { createUserWithEmailAndPassword, updateProfile, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { createUserWithEmailAndPassword, updateProfile, GoogleAuthProvider, signInWithPopup, User as FirebaseUser } from "firebase/auth";
 import { doc, serverTimestamp } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
 import { Separator } from "@/components/ui/separator";
@@ -70,7 +70,20 @@ export default function SignupPage() {
     }
   }, [initialAccountType, form]);
 
-  async function createUserProfile(user: any, data: SignupFormValues) {
+  const handleSuccess = (user: FirebaseUser, accountType: UserAccountType) => {
+    toast({
+      title: "Account Created!",
+      description: `Welcome to Venue Vendors, ${user.displayName || user.email}!`,
+    });
+
+    if (accountType === 'vendor') {
+      router.push("/dashboard/vendor/profile"); // Redirect to create profile
+    } else {
+      router.push("/");
+    }
+  }
+
+  async function createUserProfile(user: FirebaseUser, data: { name: string, accountType: UserAccountType }) {
     if (!firestore) return;
     const userDocRef = doc(firestore, "users", user.uid);
     const [firstName, ...lastName] = data.name.split(' ');
@@ -83,6 +96,11 @@ export default function SignupPage() {
       accountType: data.accountType,
       createdAt: serverTimestamp(),
     }, { merge: true });
+
+    if (data.accountType === 'client') {
+      const clientDocRef = doc(firestore, 'users', user.uid, 'client', 'profile');
+      setDocumentNonBlocking(clientDocRef, { favoriteVendorIds: [] }, { merge: true });
+    }
   }
 
   async function onSubmit(data: SignupFormValues) {
@@ -93,16 +111,8 @@ export default function SignupPage() {
       await updateProfile(user, { displayName: data.name });
       await createUserProfile(user, data);
 
-      toast({
-        title: "Account Created!",
-        description: `Welcome to Venue Vendors, ${data.name}!`,
-      });
+      handleSuccess(user, data.accountType);
 
-      if (data.accountType === 'vendor') {
-        router.push("/dashboard/vendor");
-      } else {
-        router.push("/");
-      }
     } catch (error: any) {
       console.error("Signup Error:", error);
       toast({
@@ -120,27 +130,14 @@ export default function SignupPage() {
         const result = await signInWithPopup(auth, provider);
         const user = result.user;
 
-        // Pass accountType along with other data to create profile
         const signupData = {
           name: user.displayName || user.email || 'New User',
-          email: user.email!,
-          password: '', // Not needed for Google Sign-In
-          confirmPassword: '',
           accountType: accountType
         };
 
         await createUserProfile(user, signupData);
 
-        toast({
-            title: "Google Sign-In Successful!",
-            description: `Welcome, ${user.displayName || user.email}!`,
-        });
-        
-        if (accountType === 'vendor') {
-            router.push("/dashboard/vendor");
-        } else {
-            router.push("/");
-        }
+        handleSuccess(user, accountType);
 
     } catch (error: any) {
         console.error("Google Sign-In Error:", error);
@@ -150,7 +147,7 @@ export default function SignupPage() {
             variant: "destructive",
         });
     }
-};
+  };
 
   return (
     <div className="container mx-auto flex min-h-[calc(100vh-theme(spacing.20))] items-center justify-center py-12 px-4 md:px-6">
@@ -199,7 +196,7 @@ export default function SignupPage() {
 
               <Separator />
 
-              <Button variant="outline" className="w-full" onClick={handleGoogleSignIn}>
+              <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} type="button">
                 <GoogleIcon className="mr-2 h-5 w-5" />
                 Sign up with Google
             </Button>
