@@ -3,7 +3,6 @@
 import type { NextPage } from 'next';
 import { useUser, useFirestore, useDoc, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { doc, getDoc, arrayRemove } from 'firebase/firestore';
-import VendorCard from '@/components/vendors/vendor-card';
 import type { Vendor, Service, ClientProfile } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -188,5 +187,3 @@ const MyFavsPage: NextPage = () => {
 };
 
 export default MyFavsPage;
-
-    

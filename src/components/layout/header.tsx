@@ -163,11 +163,13 @@ const Header = () => {
           </Link>
           <nav className="hidden md:flex items-center space-x-1 text-sm font-medium">
             {siteConfig.mainNav.map((item: NavItem) => (
-              <Button asChild variant="ghost" className="text-header-foreground border border-header-foreground/20 hover:bg-header-foreground/10 hover:text-header-foreground" key={item.href}>
-                <Link href={item.href}>
-                  {item.title}
-                </Link>
-              </Button>
+              <Link href={item.href} key={item.href} passHref legacyBehavior>
+                <Button asChild variant="ghost" className="text-header-foreground border border-header-foreground/20 hover:bg-header-foreground/10 hover:text-header-foreground">
+                  <a>
+                   {item.title}
+                  </a>
+                </Button>
+              </Link>
             ))}
           </nav>
         </div>
