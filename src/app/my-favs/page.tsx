@@ -1,31 +1,102 @@
 
 "use client";
 import type { NextPage } from 'next';
-import { useAtom } from 'jotai';
-import { atomWithStorage, createJSONStorage } from 'jotai/utils';
-import { useAuthMock } from '@/hooks/use-auth-mock';
+import { useUser, useFirestore, useDoc, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { doc, getDoc, arrayRemove } from 'firebase/firestore';
 import VendorCard from '@/components/vendors/vendor-card';
-import { vendors as allVendors, getVendorById } from '@/data/vendors';
-import type { Vendor, Service } from '@/types';
+import type { Vendor, Service, ClientProfile } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { HeartOff, ShoppingBag, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useEffect, useState } from 'react';
+import { RefreshCw } from 'lucide-react';
 
-interface FavoriteService {
-  vendorId: string;
-  serviceId: string;
+
+interface FavoriteDetail {
+  vendor: Vendor;
+  service: Service;
 }
-const favoritesStorage = createJSONStorage<FavoriteService[]>(() => localStorage);
-const favoriteServicesAtom = atomWithStorage<FavoriteService[]>('favoriteServices', [], favoritesStorage);
-
 
 const MyFavsPage: NextPage = () => {
-  const { isAuthenticated, user } = useAuthMock();
-  const [favoriteServices, setFavoriteServices] = useAtom(favoriteServicesAtom);
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
+  const [favoritesDetails, setFavoritesDetails] = useState<FavoriteDetail[]>([]);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(true);
 
-  if (!isAuthenticated || user?.accountType !== 'client') {
+  const clientProfileRef = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return doc(firestore, 'users', user.uid, 'client', 'profile');
+  }, [firestore, user?.uid]);
+
+  const { data: clientProfile, isLoading: isProfileLoading } = useDoc<ClientProfile>(clientProfileRef);
+
+  useEffect(() => {
+    const fetchFavoriteDetails = async () => {
+      if (!clientProfile?.favoriteVendorIds || !firestore) {
+        setIsLoadingDetails(false);
+        return;
+      }
+      setIsLoadingDetails(true);
+      const details: FavoriteDetail[] = [];
+      for (const favId of clientProfile.favoriteVendorIds) {
+        const [vendorId, serviceId] = favId.split('_');
+        if (vendorId && serviceId) {
+          const vendorRef = doc(firestore, 'vendors', vendorId);
+          const serviceRef = doc(firestore, 'vendors', vendorId, 'services', serviceId);
+          
+          const [vendorSnap, serviceSnap] = await Promise.all([
+            getDoc(vendorRef),
+            getDoc(serviceRef)
+          ]);
+
+          if (vendorSnap.exists() && serviceSnap.exists()) {
+            const vendorData = { id: vendorSnap.id, ...vendorSnap.data() } as Vendor;
+            const serviceData = { id: serviceSnap.id, ...serviceSnap.data() } as Service;
+            
+            const existingVendor = details.find(d => d.vendor.id === vendorId);
+            if (existingVendor) {
+              // This logic might need adjustment if you want to group services under one vendor card
+            }
+            details.push({ vendor: vendorData, service: serviceData });
+          }
+        }
+      }
+      setFavoritesDetails(details);
+      setIsLoadingDetails(false);
+    };
+
+    fetchFavoriteDetails();
+  }, [clientProfile, firestore]);
+
+  const removeFavorite = (vendorId: string, serviceId: string) => {
+    if (!clientProfileRef) return;
+    updateDocumentNonBlocking(clientProfileRef, {
+      favoriteVendorIds: arrayRemove(`${vendorId}_${serviceId}`)
+    });
+  };
+
+  const groupedFavorites = favoritesDetails.reduce((acc, current) => {
+      const existing = acc.find(item => item.vendor.id === current.vendor.id);
+      if (existing) {
+          existing.services.push(current.service);
+      } else {
+          acc.push({ vendor: current.vendor, services: [current.service] });
+      }
+      return acc;
+  }, [] as { vendor: Vendor; services: Service[] }[]);
+
+
+  if (isUserLoading || isProfileLoading || isLoadingDetails) {
+     return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <RefreshCw className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
     return (
       <div className="container mx-auto py-12 px-4 md:px-6 text-center">
         <HeartOff className="mx-auto h-16 w-16 text-muted-foreground mb-6" />
@@ -37,27 +108,6 @@ const MyFavsPage: NextPage = () => {
       </div>
     );
   }
-
-  const groupedFavorites: { vendor: Vendor; services: Service[] }[] = [];
-
-  favoriteServices.forEach(fav => {
-    const vendor = getVendorById(fav.vendorId);
-    if (vendor) {
-      const service = vendor.services.find(s => s.id === fav.serviceId);
-      if (service) {
-        const existingEntry = groupedFavorites.find(gf => gf.vendor.id === vendor.id);
-        if (existingEntry) {
-          existingEntry.services.push(service);
-        } else {
-          groupedFavorites.push({ vendor, services: [service] });
-        }
-      }
-    }
-  });
-
-  const removeFavorite = (vendorId: string, serviceId: string) => {
-    setFavoriteServices(prev => prev.filter(fav => !(fav.vendorId === vendorId && fav.serviceId === serviceId)));
-  };
 
   return (
     <div className="container mx-auto py-8 px-4 md:px-6">
@@ -105,8 +155,8 @@ const MyFavsPage: NextPage = () => {
                         <Image 
                           src={service.photos[0]} 
                           alt={service.name} 
-                          layout="fill" 
-                          objectFit="cover" 
+                          fill
+                          className="object-cover"
                           data-ai-hint="service item photo"
                         />
                       </div>
@@ -138,3 +188,5 @@ const MyFavsPage: NextPage = () => {
 };
 
 export default MyFavsPage;
+
+    

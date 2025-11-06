@@ -2,11 +2,9 @@
 "use client";
 
 import type { NextPage } from 'next';
-import { useAuthMock } from '@/hooks/use-auth-mock';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -17,11 +15,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { categories } from '@/data/categories';
-import { addServiceToVendor } from '@/data/vendors'; // Import addServiceToVendor
-import type { Service } from '@/types'; // Import Service type
+import type { Service } from '@/types'; 
 import { ArrowLeft, PlusCircle, UploadCloud, Trash2 } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { useUser, useFirestore, addDocumentNonBlocking } from '@/firebase';
+import { collection } from 'firebase/firestore';
 
 
 const MAX_FILE_SIZE_MB = 5;
@@ -54,7 +53,8 @@ const serviceFormSchema = z.object({
 export type ServiceFormValues = z.infer<typeof serviceFormSchema>;
 
 const AddNewServicePage: NextPage = () => {
-  const { isAuthenticated, user } = useAuthMock();
+  const { user } = useUser();
+  const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
@@ -71,7 +71,7 @@ const AddNewServicePage: NextPage = () => {
     },
   });
 
-  if (!isAuthenticated || user?.accountType !== 'vendor') {
+  if (!user) {
     return (
       <div className="container mx-auto py-12 px-4 md:px-6 text-center">
         <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
@@ -108,9 +108,9 @@ const AddNewServicePage: NextPage = () => {
   };
 
 
-  const onSubmit = (data: ServiceFormValues) => {
-    if (!user?.id) {
-      toast({ title: "User not found", variant: "destructive"});
+  const onSubmit = async (data: ServiceFormValues) => {
+    if (!user?.uid || !firestore) {
+      toast({ title: "User not found or database not ready", variant: "destructive"});
       return;
     }
     if (!data.photos || data.photos.length === 0) {
@@ -118,35 +118,28 @@ const AddNewServicePage: NextPage = () => {
         return;
     }
 
-    // Mock photo upload: In a real app, you'd upload files here and get URLs.
-    // For this mock, we'll just use file names.
-    const photoFileNames = Array.from(data.photos).map(file => `mock-uploaded-${file.name}`);
+    // This is a placeholder. In a real app, you'd upload files to Firebase Storage
+    // and get their download URLs.
+    const photoUrls = photoPreviews;
 
-    const newService: Omit<Service, 'id'> = { // Omit ID as it will be generated
+    const newService: Omit<Service, 'id'> = { 
       name: data.name,
       description: data.description,
-      category: data.category, // This is category name, consistent with Service type
-      photos: photoFileNames,
+      category: data.category,
+      photos: photoUrls,
       priceRange: data.priceRange,
     };
     
-    const addedService = addServiceToVendor(user.id, newService as Service); // Cast as Service for mock
+    const servicesCollectionRef = collection(firestore, 'vendors', user.uid, 'services');
+    await addDocumentNonBlocking(servicesCollectionRef, newService);
 
-    if (addedService) {
-      toast({
-        title: 'Service Added!',
-        description: `The service "${data.name}" has been successfully added.`,
-      });
-      form.reset();
-      setPhotoPreviews([]);
-      router.push('/dashboard/vendor/services'); // Redirect to services management page
-    } else {
-      toast({
-        title: 'Error Adding Service',
-        description: 'There was an issue adding the service. Please try again.',
-        variant: 'destructive',
-      });
-    }
+    toast({
+      title: 'Service Added!',
+      description: `The service "${data.name}" has been successfully added.`,
+    });
+    form.reset();
+    setPhotoPreviews([]);
+    router.push('/dashboard/vendor/services');
   };
 
   return (
@@ -253,7 +246,7 @@ const AddNewServicePage: NextPage = () => {
                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                           {photoPreviews.map((previewUrl, index) => (
                             <div key={index} className="relative group aspect-square border rounded-md overflow-hidden shadow">
-                              <Image src={previewUrl} alt={`Photo preview ${index + 1}`} layout="fill" objectFit="cover" data-ai-hint="photo preview" />
+                              <Image src={previewUrl} alt={`Photo preview ${index + 1}`} fill style={{objectFit: 'cover'}} data-ai-hint="photo preview" />
                               <Button
                                 type="button"
                                 variant="destructive"
@@ -303,3 +296,5 @@ const AddNewServicePage: NextPage = () => {
 };
 
 export default AddNewServicePage;
+
+    

@@ -1,24 +1,16 @@
 
 "use client";
-import type { Service } from '@/types';
+import type { Service, ClientProfile } from '@/types';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Heart, DollarSign, Tag } from 'lucide-react';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
-import { useAuthMock } from '@/hooks/use-auth-mock';
+import { useUser, useFirestore, useDoc, updateDocumentNonBlocking, useMemoFirebase } from '@/firebase';
+import { doc, arrayRemove, arrayUnion } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { useAtom } from 'jotai';
-import { atomWithStorage, createJSONStorage } from 'jotai/utils';
-
-interface FavoriteService {
-  vendorId: string;
-  serviceId: string;
-}
-const favoritesStorage = createJSONStorage<FavoriteService[]>(() => localStorage);
-const favoriteServicesAtom = atomWithStorage<FavoriteService[]>('favoriteServices', [], favoritesStorage);
-
+import { useRouter } from 'next/navigation';
 
 interface VendorServiceCardProps {
   service: Service;
@@ -26,29 +18,46 @@ interface VendorServiceCardProps {
 }
 
 const VendorServiceCard: React.FC<VendorServiceCardProps> = ({ service, vendorId }) => {
-  const { isAuthenticated, user } = useAuthMock();
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
   const { toast } = useToast();
-  const [favorites, setFavorites] = useAtom(favoriteServicesAtom);
+  const router = useRouter();
 
-  const isFavorite = favorites.some(fav => fav.vendorId === vendorId && fav.serviceId === service.id);
+  const clientProfileRef = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return doc(firestore, 'users', user.uid, 'client', 'profile');
+  }, [firestore, user?.uid]);
+
+  const { data: clientProfile, isLoading: isProfileLoading } = useDoc<ClientProfile>(clientProfileRef);
+
+  const favoriteId = `${vendorId}_${service.id}`;
+  const isFavorite = clientProfile?.favoriteVendorIds?.includes(favoriteId);
 
   const handleFavoriteToggle = () => {
-    if (!isAuthenticated || user?.accountType !== 'client') {
+    if (!user) {
       toast({
-        title: "Please log in as a client",
-        description: "You need to be logged in as a client to save favorites.",
+        title: "Please log in",
+        description: "You need to be logged in to save favorites.",
         variant: "destructive",
       });
+      router.push('/login');
       return;
     }
+     if (user && !clientProfile) {
+       toast({
+        title: "Client Profile Not Found",
+        description: "We couldn't find your client profile. Please try again.",
+        variant: "destructive",
+      });
+       return;
+    }
+    if (!clientProfileRef) return;
 
-    setFavorites(prev => {
-      if (isFavorite) {
-        return prev.filter(fav => !(fav.vendorId === vendorId && fav.serviceId === service.id));
-      } else {
-        return [...prev, { vendorId, serviceId: service.id }];
-      }
-    });
+    const updateData = {
+      favoriteVendorIds: isFavorite ? arrayRemove(favoriteId) : arrayUnion(favoriteId)
+    };
+
+    updateDocumentNonBlocking(clientProfileRef, updateData);
 
     toast({
       title: isFavorite ? "Removed from Favs" : "Added to Favs!",
@@ -102,13 +111,14 @@ const VendorServiceCard: React.FC<VendorServiceCardProps> = ({ service, vendorId
           <CardHeader className="p-0 mb-3">
             <div className="flex justify-between items-start">
               <CardTitle className="text-xl font-semibold">{service.name}</CardTitle>
-              {isAuthenticated && user?.accountType === 'client' && (
+              {user && ( // Only show heart button if user is logged in
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={handleFavoriteToggle}
                   className={`rounded-full hover:bg-rose-100 dark:hover:bg-rose-800 ${isFavorite ? 'text-rose-500' : 'text-muted-foreground'}`}
                   aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                  disabled={isUserLoading || isProfileLoading}
                 >
                   <Heart className={`h-6 w-6 ${isFavorite ? 'fill-current' : ''}`} />
                 </Button>
@@ -137,3 +147,5 @@ const VendorServiceCard: React.FC<VendorServiceCardProps> = ({ service, vendorId
 };
 
 export default VendorServiceCard;
+
+    

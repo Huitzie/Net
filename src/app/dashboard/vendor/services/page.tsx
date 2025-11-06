@@ -5,9 +5,9 @@ import type { NextPage } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import React, { useState, useEffect } from 'react';
-import { useAuthMock } from '@/hooks/use-auth-mock';
-import { getVendorServices, deleteService as apiDeleteService } from '@/data/vendors';
+import React from 'react';
+import { useUser, useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
 import type { Service } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -27,51 +27,33 @@ import {
 import { useToast } from '@/hooks/use-toast';
 
 const ManageServicesPage: NextPage = () => {
-  const { isAuthenticated, user } = useAuthMock();
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
-  const [services, setServices] = useState<Service[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    if (isAuthenticated && user?.accountType === 'vendor' && user.id) {
-      const fetchedServices = getVendorServices(user.id); // Assuming user.id is the vendorId
-      if (fetchedServices) {
-        setServices(fetchedServices);
-      }
-      setIsLoading(false);
-    }
-  }, [isAuthenticated, user]);
+  const servicesCollectionRef = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return collection(firestore, 'vendors', user.uid, 'services');
+  }, [firestore, user?.uid]);
 
-  if (!isAuthenticated || user?.accountType !== 'vendor') {
-    return (
-      <div className="container mx-auto py-12 px-4 md:px-6 text-center">
-        <AlertTriangle className="mx-auto h-12 w-12 text-yellow-500 mb-4" />
-        <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
-        <p className="text-muted-foreground mb-4">You must be logged in as a vendor to manage services.</p>
-        <Button asChild>
-          <Link href="/login">Log In</Link>
-        </Button>
-      </div>
-    );
+  const { data: services, isLoading: areServicesLoading } = useCollection<Service>(servicesCollectionRef);
+
+  const isLoading = isUserLoading || areServicesLoading;
+
+  if (!user && !isUserLoading) {
+    router.replace('/login?type=vendor');
+    return null;
   }
 
   const handleDeleteService = (serviceId: string, serviceName: string) => {
-    if (!user?.id) return;
-    const success = apiDeleteService(user.id, serviceId);
-    if (success) {
-      setServices(prevServices => prevServices.filter(s => s.id !== serviceId));
-      toast({
-        title: "Service Deleted",
-        description: `Service "${serviceName}" has been successfully deleted.`,
-      });
-    } else {
-      toast({
-        title: "Error Deleting Service",
-        description: `Could not delete service "${serviceName}". Please try again.`,
-        variant: "destructive",
-      });
-    }
+    if (!user?.uid || !firestore) return;
+    const serviceDocRef = doc(firestore, 'vendors', user.uid, 'services', serviceId);
+    deleteDocumentNonBlocking(serviceDocRef);
+    toast({
+      title: "Service Deleted",
+      description: `Service "${serviceName}" has been successfully deleted.`,
+    });
   };
 
   if (isLoading) {
@@ -94,7 +76,6 @@ const ManageServicesPage: NextPage = () => {
         </div>
     );
   }
-
 
   return (
     <div className="container mx-auto py-8 px-4 md:px-6">
@@ -120,7 +101,7 @@ const ManageServicesPage: NextPage = () => {
         </Button>
       </div>
 
-      {services.length === 0 && !isLoading ? (
+      {services && services.length === 0 && !isLoading ? (
         <Card className="text-center py-12 shadow-lg">
           <CardHeader>
             <ListOrdered className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
@@ -139,7 +120,7 @@ const ManageServicesPage: NextPage = () => {
         </Card>
       ) : (
         <div className="space-y-6">
-          {services.map((service) => (
+          {services && services.map((service) => (
             <Card key={service.id} className="overflow-hidden shadow-lg">
               <div className="grid grid-cols-1 md:grid-cols-3">
                 {service.photos && service.photos.length > 0 && (
@@ -198,11 +179,6 @@ const ManageServicesPage: NextPage = () => {
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
-                     <Button variant="ghost" size="sm" asChild className="text-primary">
-                      <Link href={`/vendors/${user?.slug}/services/${service.id}`}> {/*  TODO: Adjust if service pages are implemented */}
-                        <Eye className="mr-2 h-4 w-4" /> View Public
-                      </Link>
-                    </Button>
                   </CardFooter>
                 </div>
               </div>
@@ -215,3 +191,5 @@ const ManageServicesPage: NextPage = () => {
 };
 
 export default ManageServicesPage;
+
+    

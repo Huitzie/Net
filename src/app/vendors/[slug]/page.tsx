@@ -1,9 +1,9 @@
 
-import type { NextPage, Metadata } from 'next';
-import { notFound } from 'next/navigation';
+'use client';
+import type { NextPage } from 'next';
+import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
-import { getVendorBySlug, vendors as allVendors } from '@/data/vendors';
-import type { Service, Review } from '@/types';
+import type { Service, Review, Vendor } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,34 +14,38 @@ import { Separator } from '@/components/ui/separator';
 import StarRating from '@/components/ui/star-rating';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where, limit } from 'firebase/firestore';
 
-interface VendorPageProps {
-  params: {
-    slug: string;
-  };
-}
 
-export async function generateStaticParams() {
-  return allVendors.map((vendor) => ({
-    slug: vendor.slug,
-  }));
-}
+const VendorPage: NextPage = () => {
+  const params = useParams();
+  const slug = params.slug as string;
+  const firestore = useFirestore();
 
-export async function generateMetadata({ params }: VendorPageProps): Promise<Metadata> {
-  const vendor = getVendorBySlug(params.slug);
-  if (!vendor) {
-    return {
-      title: 'Vendor Not Found',
-    };
+  const vendorQuery = useMemoFirebase(() => {
+    if (!firestore || !slug) return null;
+    return query(collection(firestore, 'vendors'), where('slug', '==', slug), limit(1));
+  }, [firestore, slug]);
+  
+  const { data: vendors, isLoading: isVendorLoading } = useCollection<Vendor>(vendorQuery);
+  const vendor = vendors?.[0];
+
+  const servicesCollectionRef = useMemoFirebase(() => {
+    if (!firestore || !vendor?.id) return null;
+    return collection(firestore, 'vendors', vendor.id, 'services');
+  }, [firestore, vendor?.id]);
+
+  const { data: services, isLoading: areServicesLoading } = useCollection<Service>(servicesCollectionRef);
+
+  // TODO: Fetch reviews as subcollection
+  const reviews = vendor?.reviews || [];
+
+
+  if (isVendorLoading || areServicesLoading) {
+    // TODO: Make a nice loading skeleton
+    return <div>Loading vendor...</div>;
   }
-  return {
-    title: `${vendor.name} | Venue Vendors`,
-    description: vendor.description.substring(0, 150) + '...' || `Services offered by ${vendor.name} in ${vendor.city}, ${vendor.state}.`,
-  };
-}
-
-const VendorPage: NextPage<VendorPageProps> = ({ params }) => {
-  const vendor = getVendorBySlug(params.slug);
 
   if (!vendor) {
     notFound();
@@ -100,11 +104,13 @@ const VendorPage: NextPage<VendorPageProps> = ({ params }) => {
                   <span className="ml-1 text-muted-foreground">({vendor.reviewsCount || 0} reviews)</span>
                 </div>
               )}
-              <div className="flex flex-wrap gap-2 pt-2">
-                {vendor.categories.map(catName => (
-                  <Badge key={catName} variant="secondary">{catName}</Badge>
-                ))}
-              </div>
+              {vendor.categoryIds && (
+                <div className="flex flex-wrap gap-2 pt-2">
+                  {vendor.categoryIds.map(catId => (
+                    <Badge key={catId} variant="secondary">{catId}</Badge> // TODO: Get category name from ID
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -151,9 +157,9 @@ const VendorPage: NextPage<VendorPageProps> = ({ params }) => {
 
           <div>
             <h2 className="text-2xl font-bold mb-6">Services Offered</h2>
-            {vendor.services && vendor.services.length > 0 ? (
+            {services && services.length > 0 ? (
               <div className="space-y-6">
-                {vendor.services.map((service: Service) => (
+                {services.map((service: Service) => (
                   <VendorServiceCard key={service.id} service={service} vendorId={vendor.id} />
                 ))}
               </div>
@@ -177,9 +183,9 @@ const VendorPage: NextPage<VendorPageProps> = ({ params }) => {
               </Button>
             </CardHeader>
             <CardContent>
-              {vendor.reviews && vendor.reviews.length > 0 ? (
+              {reviews && reviews.length > 0 ? (
                 <div className="space-y-6">
-                  {vendor.reviews.map((review: Review) => (
+                  {reviews.map((review: Review) => (
                     <Card key={review.id} className="bg-muted/30 p-4 shadow-sm">
                       <CardHeader className="p-0 mb-2 flex flex-row items-start space-x-3">
                         <Avatar className="h-10 w-10 border">
@@ -206,7 +212,7 @@ const VendorPage: NextPage<VendorPageProps> = ({ params }) => {
                 </div>
               )}
             </CardContent>
-             {vendor.reviews && vendor.reviews.length > 3 && (
+             {reviews && reviews.length > 3 && (
               <CardFooter className="justify-center pt-4">
                 <Button variant="link">View All Reviews</Button>
               </CardFooter>
@@ -220,3 +226,5 @@ const VendorPage: NextPage<VendorPageProps> = ({ params }) => {
 };
 
 export default VendorPage;
+
+    

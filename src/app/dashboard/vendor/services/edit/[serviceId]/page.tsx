@@ -2,11 +2,9 @@
 "use client";
 
 import type { NextPage } from 'next';
-import { useAuthMock } from '@/hooks/use-auth-mock';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -17,11 +15,12 @@ import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { categories } from '@/data/categories';
-import { getServiceById, updateService } from '@/data/vendors';
 import type { Service } from '@/types';
 import { ArrowLeft, Save, UploadCloud, Image as ImageIcon, Trash2, RefreshCw } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
+import { useUser, useFirestore, useDoc, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 
 const MAX_FILE_SIZE_MB = 5;
@@ -53,16 +52,23 @@ export type ServiceFormValues = z.infer<typeof serviceFormSchema>;
 
 
 const EditServicePage: NextPage = () => {
-  const { isAuthenticated, user } = useAuthMock();
+  const { user, isUserLoading: isAuthLoading } = useUser();
+  const firestore = useFirestore();
   const router = useRouter();
   const params = useParams();
   const { toast } = useToast();
   const serviceId = params.serviceId as string;
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [serviceData, setServiceData] = useState<Service | null>(null);
+  const serviceDocRef = useMemoFirebase(() => {
+    if (!firestore || !user?.uid || !serviceId) return null;
+    return doc(firestore, 'vendors', user.uid, 'services', serviceId);
+  }, [firestore, user?.uid, serviceId]);
+
+  const { data: serviceData, isLoading: isServiceLoading } = useDoc<Service>(serviceDocRef);
+  
   const [existingPhotos, setExistingPhotos] = useState<string[]>([]);
   const [newPhotoPreviews, setNewPhotoPreviews] = useState<string[]>([]);
+  const isLoading = isAuthLoading || isServiceLoading;
 
   const form = useForm<ServiceFormValues>({
     resolver: zodResolver(serviceFormSchema),
@@ -76,30 +82,22 @@ const EditServicePage: NextPage = () => {
   });
 
   useEffect(() => {
-    if (isAuthenticated && user?.accountType === 'vendor' && user.id && serviceId) {
-      const fetchedService = getServiceById(user.id, serviceId);
-      if (fetchedService) {
-        setServiceData(fetchedService);
-        form.reset({
-          name: fetchedService.name,
-          description: fetchedService.description,
-          category: fetchedService.category,
-          priceRange: fetchedService.priceRange || '',
-          photos: undefined, // Handled separately by existingPhotos / newPhotoPreviews
-        });
-        setExistingPhotos(fetchedService.photos || []);
-      } else {
-        toast({ title: "Service not found", variant: "destructive" });
-        router.push('/dashboard/vendor/services');
-      }
-      setIsLoading(false);
+    if (serviceData) {
+      form.reset({
+        name: serviceData.name,
+        description: serviceData.description,
+        category: serviceData.category,
+        priceRange: serviceData.priceRange || '',
+        photos: undefined,
+      });
+      setExistingPhotos(serviceData.photos || []);
     }
-  }, [isAuthenticated, user, serviceId, form, router, toast]);
+  }, [serviceData, form]);
 
   const handleNewPhotoFiles = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files) {
-      form.setValue("photos", files, { shouldValidate: true }); // Update RHF
+      form.setValue("photos", files, { shouldValidate: true });
       const previews = Array.from(files).map(file => URL.createObjectURL(file));
       setNewPhotoPreviews(previews);
     }
@@ -114,53 +112,39 @@ const EditServicePage: NextPage = () => {
     const currentFiles = form.getValues("photos");
     if (currentFiles) {
       const updatedFilesArray = Array.from(currentFiles).filter((_, i) => i !== index);
-      // Create a new FileList (this is a bit hacky as FileList is immutable)
       const dataTransfer = new DataTransfer();
       updatedFilesArray.forEach(file => dataTransfer.items.add(file));
       form.setValue("photos", dataTransfer.files.length > 0 ? dataTransfer.files : undefined);
     }
   };
 
+  const onSubmit = async (data: ServiceFormValues) => {
+    if (!user?.uid || !serviceId || !serviceDocRef) return;
 
-  const onSubmit = (data: ServiceFormValues) => {
-    if (!user?.id || !serviceId) return;
-
-    // Combine existing photos (that weren't removed) with any new photos
-    const finalPhotoFileNames: string[] = [...existingPhotos];
-    if (data.photos && data.photos.length > 0) {
-        // Mock: In a real app, upload new files and get their URLs.
-        // Here, we'll just use filenames for new uploads.
-        const newUploadedPhotoNames = Array.from(data.photos).map(file => `mock-updated-${file.name}`);
-        finalPhotoFileNames.push(...newUploadedPhotoNames);
-    }
+    // In a real app, upload new files to Firebase Storage and get their URLs.
+    // This is a placeholder implementation.
+    const newPhotoUrls = newPhotoPreviews; // Pretend these are uploaded URLs.
+    
+    const finalPhotoUrls = [...existingPhotos, ...newPhotoUrls];
 
     const updatedServiceData = {
       name: data.name,
       description: data.description,
       category: data.category,
-      photos: finalPhotoFileNames, // Use the combined list of photo URLs/names
+      photos: finalPhotoUrls,
       priceRange: data.priceRange,
     };
     
-    const result = updateService(user.id, serviceId, updatedServiceData);
+    updateDocumentNonBlocking(serviceDocRef, updatedServiceData);
 
-    if (result) {
-      toast({
-        title: 'Service Updated!',
-        description: `The service "${data.name}" has been successfully updated.`,
-      });
-      router.push('/dashboard/vendor/services');
-    } else {
-      toast({
-        title: 'Error Updating Service',
-        description: 'There was an issue updating the service. Please try again.',
-        variant: 'destructive',
-      });
-    }
+    toast({
+      title: 'Service Updated!',
+      description: `The service "${data.name}" has been successfully updated.`,
+    });
+    router.push('/dashboard/vendor/services');
   };
 
-  if (!isAuthenticated || user?.accountType !== 'vendor') {
-    // This case should ideally be handled by a layout or higher-order component
+  if (!user && !isAuthLoading) {
     return (
       <div className="container mx-auto py-12 px-4 md:px-6 text-center">
         <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
@@ -267,7 +251,7 @@ const EditServicePage: NextPage = () => {
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                     {existingPhotos.map((photoUrl, index) => (
                       <div key={`existing-${index}`} className="relative group aspect-square border rounded-md overflow-hidden shadow">
-                        <Image src={photoUrl} alt={`Existing photo ${index + 1}`} fill objectFit="cover" data-ai-hint="service photo" />
+                        <Image src={photoUrl} alt={`Existing photo ${index + 1}`} fill style={{objectFit: 'cover'}} data-ai-hint="service photo" />
                         <Button
                           type="button"
                           variant="destructive"
@@ -314,7 +298,7 @@ const EditServicePage: NextPage = () => {
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                           {newPhotoPreviews.map((previewUrl, index) => (
                              <div key={`new-${index}`} className="relative group aspect-square border rounded-md overflow-hidden shadow">
-                              <Image src={previewUrl} alt={`New photo preview ${index + 1}`} fill objectFit="cover" data-ai-hint="service photo preview" />
+                              <Image src={previewUrl} alt={`New photo preview ${index + 1}`} fill style={{objectFit: 'cover'}} data-ai-hint="service photo preview" />
                               <Button
                                 type="button"
                                 variant="destructive"
@@ -362,3 +346,5 @@ const EditServicePage: NextPage = () => {
 };
 
 export default EditServicePage;
+
+    
