@@ -16,11 +16,9 @@ run:
   # Optional: specify a custom port
   # port: 3000
   # Optional: specify custom environment variables
-  # env:
-  #   - variable: 'API_KEY'
-  #     value: 'my-secret-api-key'
-  #   - variable: 'ENVIRONMENT'
-  #     value: 'production'
+  env:
+    - variable: 'NEXT_PUBLIC_APP_URL'
+      value: 'https://your-app-url.apphosting.dev'
 
 # Specifies the number of concurrent requests per instance
 concurrency: 80
