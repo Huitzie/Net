@@ -1,0 +1,36 @@
+# Specifies the version of the App Hosting platform
+version: 1
+
+# Specifies the Next.js framework
+framework: nextjs
+
+# Optional: To skip the build step, specify a custom build command
+# build:
+#   command: 'npm run custom-build'
+# To skip the build step completely
+#   command: 'true'
+
+# Specifies the run command for the server
+run:
+  command: 'npm run start'
+  # Optional: specify a custom port
+  # port: 3000
+  # Optional: specify custom environment variables
+  # env:
+  #   - variable: 'API_KEY'
+  #     value: 'my-secret-api-key'
+  #   - variable: 'ENVIRONMENT'
+  #     value: 'production'
+
+# Specifies the number of concurrent requests per instance
+concurrency: 80
+
+# Optional: specify the number of vCPUs and the amount of memory
+# resources:
+#   cpu: 1
+#   memory: '2Gi'
+
+# Optional: specify the number of min and max instances
+# scaling:
+#   minInstances: 0
+#   maxInstances: 10
