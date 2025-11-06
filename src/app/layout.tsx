@@ -6,6 +6,7 @@ import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer'; // Added import
 import { Toaster } from '@/components/ui/toaster';
 import { Providers } from '@/components/providers';
+import { FirebaseClientProvider } from '@/firebase';
 
 
 const poppins = Poppins({
@@ -27,16 +28,17 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${poppins.variable} font-sans antialiased flex flex-col min-h-screen`}>
-        <Providers>
-          <Header />
-          <main className="flex-1">
-            {children}
-          </main>
-          <Footer /> {/* Added Footer component */}
-          <Toaster />
-        </Providers>
+        <FirebaseClientProvider>
+          <Providers>
+            <Header />
+            <main className="flex-1">
+              {children}
+            </main>
+            <Footer /> {/* Added Footer component */}
+            <Toaster />
+          </Providers>
+        </FirebaseClientProvider>
       </body>
     </html>
   );
 }
-

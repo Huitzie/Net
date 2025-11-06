@@ -47,9 +47,10 @@ export interface Vendor {
 export type UserAccountType = 'client' | 'vendor';
 
 export interface User {
-  id: string;
-  name: string;
-  email: string;
+  uid: string;
+  name: string | null;
+  email: string | null;
+  photoURL: string | null;
   accountType: UserAccountType;
 }
 

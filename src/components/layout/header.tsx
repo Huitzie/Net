@@ -5,31 +5,57 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LogIn, LogOut, User, ListChecks, LayoutDashboard, Heart, Menu, Search, Sparkles } from 'lucide-react';
-import { useAuthMock } from '@/hooks/use-auth-mock';
+import { useUser, useAuth } from '@/firebase';
+import { signOut } from 'firebase/auth';
 // import ConfettiPattern from '@/components/ui/confetti-pattern'; // Not used
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import * as React from 'react';
+import { useRouter } from 'next/navigation';
 
 const Header = () => {
-  const { isAuthenticated, user, logout, simulateLogin } = useAuthMock();
+  const { user, isUserLoading } = useUser();
+  const auth = useAuth();
+  const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
-  const userNavigation = user?.accountType ? siteConfig.userNav[user.accountType] : [];
+  // This is a placeholder. In a real app, you'd fetch this from your database
+  // after the user logs in.
+  const userAccountType = user ? 'client' : null; // or 'vendor'
 
-  const renderUserMenu = () => (
+  const userNavigation = userAccountType ? siteConfig.userNav[userAccountType] : [];
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      router.push('/');
+    } catch (error) {
+      console.error("Error signing out: ", error);
+    }
+  };
+
+  const renderUserMenu = () => {
+    if (isUserLoading) {
+      return null; // Or a loading spinner
+    }
+
+    if (!user) {
+      return renderAuthButtons();
+    }
+    
+    return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-10 w-10 rounded-full">
           <Avatar className="h-9 w-9">
-            <AvatarImage src={`https://avatar.vercel.sh/${user?.name}.png`} alt={user?.name || 'User'} />
-            <AvatarFallback>{user?.name?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
+            <AvatarImage src={user.photoURL ?? `https://avatar.vercel.sh/${user.displayName || user.email}.png`} alt={user.displayName || 'User'} />
+            <AvatarFallback>{user.displayName?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user?.name}</p>
+            <p className="text-sm font-medium leading-none">{user?.displayName || user.email}</p>
             <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
           </div>
         </DropdownMenuLabel>
@@ -45,13 +71,13 @@ const Header = () => {
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={logout} className="flex items-center gap-2 cursor-pointer">
+        <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2 cursor-pointer">
           <LogOut className="h-4 w-4" />
           Log out
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  );
+  )};
   
   const renderAuthButtons = () => (
     <div className="hidden md:flex items-center space-x-2">
@@ -61,13 +87,6 @@ const Header = () => {
       <Button variant="secondary" asChild className="bg-accent text-accent-foreground hover:bg-accent/90">
         <Link href="/signup">Sign Up</Link>
       </Button>
-      {/* Quick login buttons for testing */}
-      {process.env.NODE_ENV === 'development' && (
-        <>
-          <Button size="sm" variant="outline" onClick={() => simulateLogin('client')} className="text-foreground hover:text-accent-foreground">Login Client</Button>
-          <Button size="sm" variant="outline" onClick={() => simulateLogin('vendor')} className="text-foreground hover:text-accent-foreground">Login Vendor</Button>
-        </>
-      )}
     </div>
   );
 
@@ -97,7 +116,7 @@ const Header = () => {
             </Button>
           ))}
           <hr className="my-3"/>
-          {isAuthenticated ? (
+          {user ? (
             <>
               {userNavigation.map((item) => (
                  <Button
@@ -115,7 +134,7 @@ const Header = () => {
                   </Link>
                 </Button>
               ))}
-              <Button onClick={() => { logout(); setIsMobileMenuOpen(false); }} variant="ghost" className="w-full justify-start text-lg font-medium flex items-center gap-2 text-foreground hover:text-primary">
+              <Button onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }} variant="ghost" className="w-full justify-start text-lg font-medium flex items-center gap-2 text-foreground hover:text-primary">
                 <LogOut className="h-5 w-5" /> Log out
               </Button>
             </>
@@ -160,7 +179,7 @@ const Header = () => {
               <span className="sr-only">Search</span>
             </Link>
           </Button>
-          {isAuthenticated ? renderUserMenu() : renderAuthButtons()}
+          {renderUserMenu()}
           <MobileNav />
         </div>
       </div>

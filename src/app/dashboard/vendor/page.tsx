@@ -1,7 +1,7 @@
 
 "use client";
 import type { NextPage } from 'next';
-import { useAuthMock } from '@/hooks/use-auth-mock';
+import { useUser } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -35,9 +35,15 @@ const mockContracts = [
 
 
 const VendorDashboardPage: NextPage = () => {
-  const { isAuthenticated, user } = useAuthMock();
+  const { user, isUserLoading } = useUser();
+  // TODO: Replace with firestore user profile
+  const accountType = 'vendor';
 
-  if (!isAuthenticated || user?.accountType !== 'vendor') {
+  if (isUserLoading) {
+      return <div>Loading...</div>
+  }
+
+  if (!user || accountType !== 'vendor') {
     return (
       <div className="container mx-auto py-12 px-4 md:px-6 text-center">
         <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
@@ -51,12 +57,12 @@ const VendorDashboardPage: NextPage = () => {
 
   // Mock data for demonstration
   const vendorData = {
-    name: user.name || "Your Awesome Services",
+    name: user.displayName || "Your Awesome Services",
     profileViews: 1250,
     leads: 78,
     activeListings: 5,
     totalEarnings: 12500.75, // Example
-    profileImage: `https://picsum.photos/seed/${user.id}/200/200`
+    profileImage: user.photoURL ?? `https://picsum.photos/seed/${user.uid}/200/200`
   };
 
   return (
@@ -160,7 +166,7 @@ const VendorDashboardPage: NextPage = () => {
                 <h3 className="text-lg font-semibold">{vendorData.name}</h3>
                 <p className="text-sm text-muted-foreground">Vendor Account</p>
                 <Button variant="link" asChild className="mt-2">
-                  <Link href={`/vendors/${user.name.toLowerCase().replace(/\s+/g, '-')}`}>View Public Profile</Link>
+                  <Link href={`/vendors/${(user.displayName || '').toLowerCase().replace(/\s+/g, '-')}`}>View Public Profile</Link>
                 </Button>
               </CardContent>
             </Card>
