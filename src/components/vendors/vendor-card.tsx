@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { MapPin, Users } from 'lucide-react'; // Removed Star, will use StarRating
 import { getCategoryById } from '@/data/categories';
 import StarRating from '@/components/ui/star-rating'; // Added StarRating import
+import { Button } from '../ui/button';
 
 interface VendorCardProps {
   vendor: Vendor;
@@ -54,14 +55,21 @@ const VendorCard: React.FC<VendorCardProps> = ({ vendor }) => {
               </div>
             )}
           </CardContent>
-          <CardFooter className="pt-2 flex flex-wrap gap-1">
-             {vendor.categoryIds && vendor.categoryIds.slice(0, 2).map((catId) => {
-                const category = getCategoryById(catId);
-                return category ? <Badge key={catId} variant="secondary" className="text-xs">{category.name}</Badge> : null;
-             })}
-            {vendor.categoryIds && vendor.categoryIds.length > 2 && (
-              <Badge variant="secondary" className="text-xs">+{vendor.categoryIds.length - 2} more</Badge>
-            )}
+          <CardFooter className="pt-2 flex flex-col items-start gap-3">
+             <div className="flex flex-wrap gap-1">
+                {vendor.categoryIds && vendor.categoryIds.slice(0, 2).map((catId) => {
+                    const category = getCategoryById(catId);
+                    return category ? <Badge key={catId} variant="secondary" className="text-xs">{category.name}</Badge> : null;
+                })}
+                {vendor.categoryIds && vendor.categoryIds.length > 2 && (
+                <Badge variant="secondary" className="text-xs">+{vendor.categoryIds.length - 2} more</Badge>
+                )}
+             </div>
+             <Button variant="outline" size="sm" className="w-full" asChild>
+                <Link href={`/vendors/${vendor.slug}`}>
+                    More Services from this Vendor
+                </Link>
+             </Button>
           </CardFooter>
         </Card>
       </a>
