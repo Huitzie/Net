@@ -21,7 +21,7 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import type { UserAccountType } from "@/types";
 import { useAuth } from "@/firebase";
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, AuthErrorCodes } from "firebase/auth";
 import { Separator } from "@/components/ui/separator";
 
 const loginFormSchema = z.object({
@@ -68,9 +68,16 @@ export default function LoginPage() {
         }
     } catch (error: any) {
         console.error("Login Error:", error);
+        let description = "An unexpected error occurred.";
+        if (error.code === AuthErrorCodes.INVALID_LOGIN_CREDENTIALS) {
+            description = "Invalid email or password. Please try again.";
+        } else if (error.message) {
+            description = error.message;
+        }
+
         toast({
             title: "Login Failed",
-            description: error.message || "An unexpected error occurred.",
+            description: description,
             variant: "destructive",
         });
     }
