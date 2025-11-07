@@ -34,7 +34,15 @@
     /* Specific theme colors */
     --header-background: 300 100% 25.1%; /* Purple */
     --header-foreground: 0 0% 100%; /* White */
+
+    --sidebar-background: 220 13% 91%;
+    --sidebar-foreground: 220 14% 10%;
+    --sidebar-border: 220 13% 81%;
+    --sidebar-accent: 220 13% 86%;
+    --sidebar-accent-foreground: 220 14% 10%;
+    --sidebar-ring: 220 14% 10%;
   }
+
   .dark {
     --background: 300 10% 10%; /* Dark Purple */
     --foreground: 240 30% 92%;   /* Lighter Lavender text */
@@ -58,6 +66,45 @@
     --ring: 300 70% 60%;
     --header-background: 300 100% 20.1%; /* Darker Purple for header */
     --header-foreground: 0 0% 100%;
+
+    --sidebar-background: 224 71% 4%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-border: 217 33% 17%;
+    --sidebar-accent: 217 33% 17%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-ring: 217 33% 17%;
+  }
+
+  .high-contrast {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 0%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 0%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 0%;
+    --primary: 240 100% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 85%;
+    --secondary-foreground: 0 0% 0%;
+    --muted: 0 0% 90%;
+    --muted-foreground: 0 0% 30%;
+    --accent: 330 100% 45%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 100% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 50%;
+    --input: 0 0% 100%;
+    --ring: 240 100% 50%;
+
+    --header-background: 0 0% 0%;
+    --header-foreground: 0 0% 100%;
+
+    --sidebar-background: 0 0% 90%;
+    --sidebar-foreground: 0 0% 0%;
+    --sidebar-border: 0 0% 70%;
+    --sidebar-accent: 0 0% 80%;
+    --sidebar-accent-foreground: 0 0% 0%;
+    --sidebar-ring: 0 0% 0%;
   }
 }
 
