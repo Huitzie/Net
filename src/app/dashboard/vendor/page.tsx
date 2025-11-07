@@ -127,7 +127,7 @@ const VendorDashboardPage: NextPage = () => {
                      <Button variant="outline" className="h-20 flex-col" asChild>
                         <Link href="/dashboard/vendor/contracts"><Bot className="h-6 w-6 mb-1"/>Contracts AI</Link>
                     </Button>
-                     {vendorData?.slug && (
+                     {vendorData && vendorData.slug && (
                         <Button variant="outline" className="h-20 flex-col" asChild>
                             <Link href={`/vendors/${vendorData.slug}`}><Eye className="h-6 w-6 mb-1"/>View Public Page</Link>
                         </Button>
@@ -196,5 +196,6 @@ const VendorDashboardPage: NextPage = () => {
 };
 
 export default VendorDashboardPage;
+    
 
     
