@@ -89,6 +89,79 @@
         "userId": { "type": "string", "description": "UID of the user who suggested it." }
       },
       "required": ["id", "name", "description", "userId"]
+    },
+    "Conversation": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Conversation",
+      "type": "object",
+      "description": "A conversation thread between two or more users.",
+      "properties": {
+        "id": { "type": "string" },
+        "participantIds": { "type": "array", "items": { "type": "string" }, "description": "UIDs of the users in the conversation." },
+        "lastMessage": { "type": "string", "description": "The text of the last message sent." },
+        "lastMessageTimestamp": { "type": "string", "format": "date-time", "description": "Timestamp of the last message." },
+        "readBy": { "type": "array", "items": { "type": "string" }, "description": "List of user UIDs who have read the last message." }
+      },
+      "required": ["id", "participantIds", "lastMessageTimestamp"]
+    },
+    "Message": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Message",
+      "type": "object",
+      "description": "A single message within a conversation.",
+      "properties": {
+        "id": { "type": "string" },
+        "senderId": { "type": "string", "description": "UID of the message sender." },
+        "text": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "senderId", "text", "timestamp"]
+    },
+    "Event": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Event",
+      "type": "object",
+      "description": "A client-created event to organize vendors.",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "clientId": { "type": "string" },
+        "favoritedVendorServiceIds": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["id", "name", "clientId"]
+    },
+    "Rating": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Rating",
+      "type": "object",
+      "description": "A rating given by a client to a vendor for a specific service or booking.",
+      "properties": {
+        "id": { "type": "string" },
+        "clientId": { "type": "string" },
+        "vendorId": { "type": "string" },
+        "bookingId": { "type": "string", "description": "The ID of the confirmed booking this rating is for." },
+        "rating": { "type": "number", "minimum": 1, "maximum": 10 },
+        "comment": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "clientId", "vendorId", "bookingId", "rating", "timestamp"]
+    },
+    "Booking": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Booking",
+      "type": "object",
+      "description": "Represents a service agreement between a client and a vendor.",
+      "properties": {
+        "id": { "type": "string" },
+        "clientId": { "type": "string" },
+        "vendorId": { "type": "string" },
+        "serviceId": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "confirmed_by_vendor", "confirmed_by_client", "hired", "completed", "cancelled"] },
+        "clientConfirmation": { "type": "boolean", "default": false },
+        "vendorConfirmation": { "type": "boolean", "default": false }
+      },
+      "required": ["id", "clientId", "vendorId", "serviceId", "status"]
     }
   },
   "auth": {
@@ -103,6 +176,10 @@
           {
             "path": "client/profile",
             "definition": { "entityName": "Client", "schema": { "$ref": "#/entities/Client" }, "description": "Stores a client's private profile, like favorites." }
+          },
+          {
+            "path": "events/{eventId}",
+            "definition": { "entityName": "Event", "schema": { "$ref": "#/entities/Event" }, "description": "Stores client-created events for organizing vendors." }
           }
         ]
       },
@@ -113,6 +190,10 @@
           {
             "path": "services/{serviceId}",
             "definition": { "entityName": "Service", "schema": { "$ref": "#/entities/Service" }, "description": "Stores the services offered by a specific vendor." }
+          },
+          {
+            "path": "ratings/{ratingId}",
+            "definition": { "entityName": "Rating", "schema": { "$ref": "#/entities/Rating" }, "description": "Stores ratings for this vendor." }
           }
         ]
       },
@@ -123,8 +204,22 @@
       {
         "path": "/suggested_categories/{suggestedCategoryId}",
         "definition": { "entityName": "SuggestedCategory", "schema": { "$ref": "#/entities/SuggestedCategory" }, "description": "Stores user-submitted category suggestions." }
+      },
+      {
+        "path": "/conversations/{conversationId}",
+        "definition": { "entityName": "Conversation", "schema": { "$ref": "#/entities/Conversation" }, "description": "Stores metadata for a conversation thread." },
+        "subcollections": [
+          {
+            "path": "messages/{messageId}",
+            "definition": { "entityName": "Message", "schema": { "$ref": "#/entities/Message" }, "description": "Stores all messages in a conversation." }
+          }
+        ]
+      },
+      {
+        "path": "/bookings/{bookingId}",
+        "definition": { "entityName": "Booking", "schema": { "$ref": "#/entities/Booking" }, "description": "Stores booking agreements between clients and vendors." }
       }
     ],
-    "reasoning": "This structure separates private user data from public vendor data. Public-facing vendor profiles and their services are in top-level collections for easy, efficient, and secure querying by clients. Private user data, like account info and a client's favorites, are kept in a separate 'users' collection, protected by security rules."
+    "reasoning": "This structure separates private user data from public vendor data. Public-facing vendor profiles and their services are in top-level collections for easy, efficient, and secure querying by clients. Private user data, like account info and a client's favorites, are kept in a separate 'users' collection, protected by security rules. Conversations, bookings, and ratings are in their own top-level collections to allow for flexible querying and security rules independent of the user or vendor documents."
   }
 }

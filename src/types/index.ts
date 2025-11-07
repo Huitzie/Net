@@ -1,4 +1,5 @@
 
+
 export interface Category {
   id: string;
   name: string;
@@ -58,7 +59,45 @@ export interface ClientProfile {
   favoriteVendorIds?: string[];
 }
 
-// No longer needed as we are not creating a separate vendor profile document
-// export interface VendorProfile extends User {
-//   vendorDetailsId: string; // Link to Vendor data
-// }
+export interface Event {
+    id: string;
+    name: string;
+    date?: any; // Firestore Timestamp
+    clientId: string;
+    favoritedVendorServiceIds?: string[];
+}
+
+export interface Conversation {
+    id: string;
+    participantIds: string[];
+    lastMessage?: string;
+    lastMessageTimestamp?: any; // Firestore Timestamp
+    readBy: string[];
+}
+
+export interface Message {
+    id: string;
+    senderId: string;
+    text: string;
+    timestamp: any; // Firestore Timestamp
+}
+
+export interface Rating {
+    id: string;
+    clientId: string;
+    vendorId: string;
+    bookingId: string;
+    rating: number; // 1-10
+    comment?: string;
+    timestamp: any; // Firestore Timestamp
+}
+
+export interface Booking {
+    id: string;
+    clientId: string;
+    vendorId: string;
+    serviceId: string;
+    status: 'pending' | 'confirmed_by_vendor' | 'confirmed_by_client' | 'hired' | 'completed' | 'cancelled';
+    clientConfirmation: boolean;
+    vendorConfirmation: boolean;
+}

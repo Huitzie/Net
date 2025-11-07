@@ -39,7 +39,7 @@ const VendorPage: NextPage = () => {
   const { data: services, isLoading: areServicesLoading } = useCollection<Service>(servicesCollectionRef);
 
   // TODO: Fetch reviews as subcollection
-  const reviews = vendor?.reviews || [];
+  const reviews: Review[] = [];
 
 
   if (isVendorLoading || areServicesLoading) {
@@ -226,5 +226,3 @@ const VendorPage: NextPage = () => {
 };
 
 export default VendorPage;
-
-    
