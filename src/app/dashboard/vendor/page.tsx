@@ -7,7 +7,7 @@ import type { Vendor, Service, Conversation, Event, Booking } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { AreaChart, ListOrdered, PlusCircle, Settings, Users, FileText, MessageSquare, Eye, DollarSign } from 'lucide-react';
+import { AreaChart, ListOrdered, PlusCircle, Settings, Users, FileText, MessageSquare, Eye, DollarSign, Bot } from 'lucide-react';
 import Link from 'next/link';
 import VendorCard from '@/components/vendors/vendor-card';
 
@@ -124,6 +124,9 @@ const VendorDashboardPage: NextPage = () => {
                      <Button variant="outline" className="h-20 flex-col" asChild>
                         <Link href="/inbox"><MessageSquare className="h-6 w-6 mb-1"/>Client Inbox</Link>
                     </Button>
+                     <Button variant="outline" className="h-20 flex-col" asChild>
+                        <Link href="/dashboard/vendor/contracts"><Bot className="h-6 w-6 mb-1"/>Contracts AI</Link>
+                    </Button>
                      {vendorData?.slug && (
                         <Button variant="outline" className="h-20 flex-col" asChild>
                             <Link href={`/vendors/${vendorData.slug}`}><Eye className="h-6 w-6 mb-1"/>View Public Page</Link>
@@ -193,5 +196,3 @@ const VendorDashboardPage: NextPage = () => {
 };
 
 export default VendorDashboardPage;
-
-    
