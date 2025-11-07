@@ -47,9 +47,21 @@ const SearchResults = () => {
   }, [firestore, state, city, categoryId]);
 
   useEffect(() => {
-    if (!initialQuery) return;
+    // Show mock vendors immediately for the specified search criteria if applicable
+    const relevantMockVendors = mockVendors.filter(v => 
+        (!state || v.state === state) && 
+        (!city || v.city === city) &&
+        (!categoryId || (v.categoryIds && v.categoryIds.includes(categoryId)))
+    );
+    setVendors(relevantMockVendors);
+
+
+    if (!initialQuery) {
+        setIsLoading(false);
+        setHasMore(false);
+        return;
+    };
     setIsLoading(true);
-    setVendors([]);
     setLastVisible(null);
     setHasMore(true);
 
@@ -64,16 +76,20 @@ const SearchResults = () => {
         const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
         setLastVisible(lastDoc);
         
-        // Prepend mock vendors to the fetched vendors
-        const combinedVendors = [...mockVendors, ...fetchedVendors.filter(v => !mockVendors.some(mv => mv.id === v.id))];
-        setVendors(combinedVendors);
+        setVendors(prevMocks => {
+            const combined = [...prevMocks];
+            fetchedVendors.forEach(fetched => {
+                if (!combined.some(v => v.id === fetched.id)) {
+                    combined.push(fetched);
+                }
+            });
+            return combined;
+        });
 
         setHasMore(fetchedVendors.length === VENDOR_PAGE_SIZE);
 
       } catch (error) {
         console.error("Error fetching vendors:", error);
-        // If there's an error, still show mock vendors
-        setVendors(mockVendors);
       } finally {
         setIsLoading(false);
       }
@@ -105,13 +121,11 @@ const SearchResults = () => {
     }
   }
 
-  // Client-side keyword filtering - now also filters mock vendors
   const displayedVendors = useMemo(() => {
-    const allVendors = [...mockVendors, ...vendors.filter(v => !mockVendors.some(mv => mv.id === v.id))];
-    if (!keyword) return allVendors;
+    if (!keyword) return vendors;
     
     const keywordLower = keyword.toLowerCase();
-    return allVendors.filter(v => 
+    return vendors.filter(v => 
       v.name.toLowerCase().includes(keywordLower) ||
       v.description.toLowerCase().includes(keywordLower) ||
       (v.tagline && v.tagline.toLowerCase().includes(keywordLower)) ||
@@ -131,65 +145,49 @@ const SearchResults = () => {
   }
 
   const category = categoryId ? getCategoryById(categoryId) : null;
-  
-  // Show mock vendors even if loading or no results
   const totalFound = displayedVendors.length;
-  const realVendorsFound = displayedVendors.filter(v => !v.id.startsWith('mock-')).length;
-
-  if (totalFound === mockVendors.length && realVendorsFound === 0 && !isLoading) {
+  
+  if (totalFound === 0 && !isLoading) {
     const categoryName = category ? category.name : "this type of";
     const shareText = `Looking for a ${categoryName} vendor in ${city}, ${state}? Venue Vendors needs you! If you provide this service, sign up to get hired: ${process.env.NEXT_PUBLIC_APP_URL || 'https://venuevendors.example.com'}/signup?type=vendor`;
     const twitterShareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
     const facebookShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(process.env.NEXT_PUBLIC_APP_URL || 'https://venuevendors.example.com')}&quote=${encodeURIComponent(shareText)}`;
 
     return (
-      <>
-        <div className="mb-8">
-            <h2 className="text-2xl font-semibold mb-6">
-                Showing {mockVendors.length} Sample Vendors in {city}, {state}
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {mockVendors.map((vendor) => (
-                    <VendorCard key={vendor.id} vendor={vendor} />
-                ))}
-            </div>
-        </div>
-
-        <div className="text-center py-10 mt-8 border-t">
-            <Sparkles className="mx-auto h-16 w-16 text-primary mb-6" />
-            <h2 className="text-3xl font-semibold mb-3">No Real Vendors Found... Yet!</h2>
-            <p className="text-lg text-muted-foreground mb-6">
-            Help us grow! Be the first {category ? `${category.name} ` : ''}vendor in {city}, {state}.
-            </p>
-            <Card className="max-w-md mx-auto bg-secondary/30 p-6">
-            <CardContent className="flex flex-col items-center gap-4">
-                <p className="font-semibold">Know a vendor or are one yourself?</p>
-                <Button asChild className="w-full">
-                <Link href="/signup?type=vendor">Sign Up Your Service!</Link>
-                </Button>
-                <p className="text-sm text-muted-foreground">Or share this to help us find them:</p>
-                <div className="flex space-x-3">
-                <Button variant="outline" asChild>
-                    <a href={twitterShareUrl} target="_blank" rel="noopener noreferrer">
-                    <Share2 className="mr-2 h-4 w-4" /> Share on X
-                    </a>
-                </Button>
-                <Button variant="outline" asChild>
-                    <a href={facebookShareUrl} target="_blank" rel="noopener noreferrer">
-                    <Share2 className="mr-2 h-4 w-4" /> Share on Facebook
-                    </a>
-                </Button>
-                </div>
-            </CardContent>
-            </Card>
-            <p className="mt-8 text-muted-foreground">
-                Can't find the right category?{' '}
-                <Link href="/suggest-category" className="text-primary hover:underline">
-                Suggest a new one!
-                </Link>
-            </p>
-        </div>
-      </>
+      <div className="text-center py-10 mt-8 border-t">
+          <Sparkles className="mx-auto h-16 w-16 text-primary mb-6" />
+          <h2 className="text-3xl font-semibold mb-3">No Vendors Found... Yet!</h2>
+          <p className="text-lg text-muted-foreground mb-6">
+          Help us grow! Be the first {category ? `${category.name} ` : ''}vendor in {city}, {state}.
+          </p>
+          <Card className="max-w-md mx-auto bg-secondary/30 p-6">
+          <CardContent className="flex flex-col items-center gap-4">
+              <p className="font-semibold">Know a vendor or are one yourself?</p>
+              <Button asChild className="w-full">
+              <Link href="/signup?type=vendor">Sign Up Your Service!</Link>
+              </Button>
+              <p className="text-sm text-muted-foreground">Or share this to help us find them:</p>
+              <div className="flex space-x-3">
+              <Button variant="outline" asChild>
+                  <a href={twitterShareUrl} target="_blank" rel="noopener noreferrer">
+                  <Share2 className="mr-2 h-4 w-4" /> Share on X
+                  </a>
+              </Button>
+              <Button variant="outline" asChild>
+                  <a href={facebookShareUrl} target="_blank" rel="noopener noreferrer">
+                  <Share2 className="mr-2 h-4 w-4" /> Share on Facebook
+                  </a>
+              </Button>
+              </div>
+          </CardContent>
+          </Card>
+          <p className="mt-8 text-muted-foreground">
+              Can't find the right category?{' '}
+              <Link href="/suggest-category" className="text-primary hover:underline">
+              Suggest a new one!
+              </Link>
+          </p>
+      </div>
     );
   }
 
@@ -208,10 +206,11 @@ const SearchResults = () => {
           <VendorCard key={vendor.id} vendor={vendor} />
         ))}
       </div>
-      {hasMore && (
+      {isLoading && totalFound > 0 && <LoadingSpinner />}
+      {!isLoading && hasMore && (
         <div className="mt-8 text-center">
             <Button onClick={loadMoreVendors} disabled={isLoading}>
-                {isLoading ? <><RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Loading...</> : 'Load More Vendors'}
+                {'Load More Vendors'}
             </Button>
         </div>
       )}
@@ -277,6 +276,12 @@ const LoadingResults = () => (
     </div>
   </div>
 );
+
+const LoadingSpinner = () => (
+    <div className="flex justify-center items-center py-8">
+        <RefreshCw className="h-8 w-8 text-primary animate-spin" />
+    </div>
+)
 
 
 export default SearchPage;

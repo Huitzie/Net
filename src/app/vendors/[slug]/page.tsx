@@ -17,33 +17,45 @@ import { format } from 'date-fns';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, limit } from 'firebase/firestore';
 import { getCategoryById } from '@/data/categories';
-
+import { mockVendors, mockServices } from '@/data/mock-vendors';
 
 const VendorPage: NextPage = () => {
   const params = useParams();
   const slug = params.slug as string;
   const firestore = useFirestore();
 
+  // Check if the slug belongs to a mock vendor
+  const mockVendor = mockVendors.find(v => v.slug === slug);
+  const mockVendorServices = mockVendor ? mockServices[mockVendor.id] || [] : [];
+
   const vendorQuery = useMemoFirebase(() => {
-    if (!firestore || !slug) return null;
+    // If it's a mock vendor, we don't need to query Firestore for the vendor profile
+    if (!firestore || !slug || mockVendor) return null;
     return query(collection(firestore, 'vendors'), where('slug', '==', slug), limit(1));
-  }, [firestore, slug]);
+  }, [firestore, slug, mockVendor]);
   
   const { data: vendors, isLoading: isVendorLoading } = useCollection<Vendor>(vendorQuery);
-  const vendor = vendors?.[0];
+  const firestoreVendor = vendors?.[0];
+
+  const vendor = mockVendor || firestoreVendor;
 
   const servicesCollectionRef = useMemoFirebase(() => {
-    if (!firestore || !vendor?.id) return null;
+    // If it's a mock vendor, we don't query for services. We use the hardcoded ones.
+    if (!firestore || !vendor?.id || mockVendor) return null;
     return collection(firestore, 'vendors', vendor.id, 'services');
-  }, [firestore, vendor?.id]);
+  }, [firestore, vendor?.id, mockVendor]);
 
-  const { data: services, isLoading: areServicesLoading } = useCollection<Service>(servicesCollectionRef);
+  const { data: firestoreServices, isLoading: areServicesLoading } = useCollection<Service>(servicesCollectionRef);
 
+  const services = mockVendor ? mockVendorServices : firestoreServices;
+  
   // TODO: Fetch reviews as subcollection
   const reviews: Review[] = [];
 
+  // Determine final loading state
+  const isLoading = !mockVendor && (isVendorLoading || areServicesLoading);
 
-  if (isVendorLoading || areServicesLoading) {
+  if (isLoading) {
     // TODO: Make a nice loading skeleton
     return <div>Loading vendor...</div>;
   }
