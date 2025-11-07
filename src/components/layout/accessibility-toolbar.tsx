@@ -65,15 +65,15 @@ export function AccessibilityToolbar() {
 
   return (
     <div className="fixed bottom-4 right-4 z-50">
-      <SidebarProvider>
+      <SidebarProvider defaultOpen={false}>
         <Sidebar
           side="right"
           variant="floating"
-          collapsible="icon"
+          collapsible="offcanvas"
           className="w-80"
         >
-          <SidebarHeader>
-            <SidebarTrigger className="absolute -left-10 top-1/2 -translate-y-1/2">
+          <SidebarHeader className="h-0">
+             <SidebarTrigger className="absolute bottom-0 right-0">
               <Accessibility />
             </SidebarTrigger>
           </SidebarHeader>
