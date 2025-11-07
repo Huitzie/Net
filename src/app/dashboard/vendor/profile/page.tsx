@@ -132,7 +132,7 @@ const VendorProfileSetupPage: NextPage = () => {
             slug: data.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
             profileImage: profileImageUrl,
             bannerImage: bannerImageUrl,
-            contactEmail: user.email,
+            contactEmail: user.email || 'hello@venuevendors.org',
         };
 
         setDocumentNonBlocking(vendorRef, profileData, { merge: true });

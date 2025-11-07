@@ -127,7 +127,7 @@ export default function SuggestCategoryForm({ initialCategoryName }: SuggestCate
             <FormItem>
               <FormLabel>Your Email (Optional)</FormLabel>
               <FormControl>
-                <Input type="email" placeholder="your.email@example.com" {...field} />
+                <Input type="email" placeholder="hello@venuevendors.org" {...field} />
               </FormControl>
               <FormDescription>
                 We may contact you if we have questions about your suggestion.

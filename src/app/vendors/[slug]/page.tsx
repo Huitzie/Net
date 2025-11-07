@@ -16,6 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, limit } from 'firebase/firestore';
+import { getCategoryById } from '@/data/categories';
 
 
 const VendorPage: NextPage = () => {
@@ -106,9 +107,10 @@ const VendorPage: NextPage = () => {
               )}
               {vendor.categoryIds && (
                 <div className="flex flex-wrap gap-2 pt-2">
-                  {vendor.categoryIds.map(catId => (
-                    <Badge key={catId} variant="secondary">{catId}</Badge> // TODO: Get category name from ID
-                  ))}
+                  {vendor.categoryIds.map(catId => {
+                     const category = getCategoryById(catId);
+                     return category ? <Badge key={catId} variant="secondary">{category.name}</Badge> : null;
+                  })}
                 </div>
               )}
             </CardContent>
@@ -226,5 +228,3 @@ const VendorPage: NextPage = () => {
 };
 
 export default VendorPage;
-
-    
