@@ -100,6 +100,7 @@ const VendorProfileSetupPage: NextPage = () => {
   }, [vendorData, form]);
 
   useEffect(() => {
+    // If loading is finished and there's no user, redirect to login.
     if (!isUserLoading && !user) {
       router.replace('/login?redirect=/dashboard/vendor/profile');
     }
@@ -352,3 +353,5 @@ const VendorProfileSetupPage: NextPage = () => {
 };
 
 export default VendorProfileSetupPage;
+
+    
