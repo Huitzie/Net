@@ -24,7 +24,6 @@ export const siteConfig = {
   userNav: {
     client: [
       { title: "My Profile", href: "/profile" },
-      { title: "My Favs", href: "/my-favs" },
     ],
     vendor: [
       { title: "Dashboard", href: "/dashboard/vendor" },
