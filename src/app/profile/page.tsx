@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Edit3, Mail, UserCircle2, Shield, RefreshCw, Trash2, KeyRound } from 'lucide-react';
+import { Edit3, Mail, UserCircle2, Shield, RefreshCw, Trash2, KeyRound, Inbox } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/firebase';
 import { sendPasswordResetEmail, deleteUser } from 'firebase/auth';
@@ -188,20 +188,22 @@ const UserProfilePage: NextPage = () => {
             </div>
           </div>
 
-          {accountType === 'vendor' && (
-            <div className="pt-4 border-t">
-               <Button asChild className="w-full mt-2">
-                <Link href="/dashboard/vendor">Go to Vendor Dashboard</Link>
+          
+          <div className="pt-4 border-t space-y-2">
+             <h3 className="text-lg font-semibold">My Dashboard</h3>
+             {accountType === 'vendor' ? (
+                <Button asChild className="w-full">
+                    <Link href="/dashboard/vendor">Go to Vendor Dashboard</Link>
+                </Button>
+              ) : (
+                <Button asChild className="w-full">
+                    <Link href="/my-favs">View My Events & Favorites</Link>
+                </Button>
+              )}
+               <Button asChild variant="outline" className="w-full">
+                  <Link href="/inbox"><Inbox className="mr-2 h-4 w-4" /> View Inbox</Link>
               </Button>
-            </div>
-          )}
-           {accountType === 'client' && (
-            <div className="pt-4 border-t">
-               <Button asChild className="w-full mt-2">
-                <Link href="/my-favs">View My Favorites</Link>
-              </Button>
-            </div>
-          )}
+          </div>
         </CardContent>
       </Card>
     </div>

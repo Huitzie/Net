@@ -1,17 +1,29 @@
 
 "use client";
 import type { NextPage } from 'next';
-import { useUser, useFirestore, useDoc, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { doc, getDoc, arrayRemove } from 'firebase/firestore';
-import type { Vendor, Service, ClientProfile } from '@/types';
+import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { doc, getDoc, arrayRemove, collection } from 'firebase/firestore';
+import type { Vendor, Service, ClientProfile, Event } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { HeartOff, ShoppingBag, Trash2 } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { HeartOff, ShoppingBag, Trash2, PlusCircle, CalendarPlus, X } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
-
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface FavoriteDetail {
   vendor: Vendor;
@@ -21,8 +33,10 @@ interface FavoriteDetail {
 const MyFavsPage: NextPage = () => {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const { toast } = useToast();
   const [favoritesDetails, setFavoritesDetails] = useState<FavoriteDetail[]>([]);
   const [isLoadingDetails, setIsLoadingDetails] = useState(true);
+  const [newEventName, setNewEventName] = useState('');
 
   const clientProfileRef = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
@@ -30,21 +44,25 @@ const MyFavsPage: NextPage = () => {
   }, [firestore, user?.uid]);
 
   const { data: clientProfile, isLoading: isProfileLoading } = useDoc<ClientProfile>(clientProfileRef);
+  
+  const eventsCollectionRef = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return collection(firestore, 'users', user.uid, 'events');
+  }, [firestore, user?.uid]);
+
+  const { data: events, isLoading: areEventsLoading } = useCollection<Event>(eventsCollectionRef);
 
   useEffect(() => {
     const fetchFavoriteDetails = async () => {
       if (!firestore) return;
-      if (!clientProfile) {
+      if (!clientProfile || isProfileLoading) {
         setIsLoadingDetails(false);
-        // If profile is loaded but has no favs, or doesn't exist, we're done.
-        if(!isProfileLoading) {
-            setFavoritesDetails([]);
-        }
+        if(!isProfileLoading) setFavoritesDetails([]);
         return;
       }
       
-      const favoriteIds = clientProfile.favoriteVendorIds;
-      if (!favoriteIds || favoriteIds.length === 0) {
+      const favoriteIds = clientProfile.favoriteVendorIds || [];
+      if (favoriteIds.length === 0) {
         setFavoritesDetails([]);
         setIsLoadingDetails(false);
         return;
@@ -59,10 +77,7 @@ const MyFavsPage: NextPage = () => {
             const vendorRef = doc(firestore, 'vendors', vendorId);
             const serviceRef = doc(firestore, 'vendors', vendorId, 'services', serviceId);
             
-            const [vendorSnap, serviceSnap] = await Promise.all([
-              getDoc(vendorRef),
-              getDoc(serviceRef)
-            ]);
+            const [vendorSnap, serviceSnap] = await Promise.all([getDoc(vendorRef), getDoc(serviceRef)]);
 
             if (vendorSnap.exists() && serviceSnap.exists()) {
               const vendorData = { id: vendorSnap.id, ...vendorSnap.data() } as Vendor;
@@ -91,6 +106,17 @@ const MyFavsPage: NextPage = () => {
     });
   };
 
+  const handleCreateEvent = () => {
+    if (!newEventName.trim() || !user || !eventsCollectionRef) return;
+    addDocumentNonBlocking(eventsCollectionRef, {
+      name: newEventName,
+      clientId: user.uid,
+      favoritedVendorServiceIds: []
+    });
+    toast({ title: "Event Created", description: `"${newEventName}" has been created.` });
+    setNewEventName('');
+  };
+
   const groupedFavorites = favoritesDetails.reduce((acc, current) => {
       const existing = acc.find(item => item.vendor.id === current.vendor.id);
       if (existing) {
@@ -102,7 +128,7 @@ const MyFavsPage: NextPage = () => {
   }, [] as { vendor: Vendor; services: Service[] }[]);
 
 
-  if (isUserLoading || isProfileLoading || (isLoadingDetails && !clientProfile)) {
+  if (isUserLoading || isProfileLoading || isLoadingDetails || areEventsLoading) {
      return (
       <div className="flex h-[70vh] w-full items-center justify-center">
         <RefreshCw className="h-10 w-10 animate-spin text-primary" />
@@ -115,10 +141,8 @@ const MyFavsPage: NextPage = () => {
       <div className="container mx-auto py-12 px-4 md:px-6 text-center">
         <HeartOff className="mx-auto h-16 w-16 text-muted-foreground mb-6" />
         <h1 className="text-3xl font-bold mb-4">Access Denied</h1>
-        <p className="text-lg text-muted-foreground mb-6">Please log in as a client to view your favorite vendors and services.</p>
-        <Button asChild>
-          <Link href="/login">Log In</Link>
-        </Button>
+        <p className="text-lg text-muted-foreground mb-6">Please log in as a client to view your favorites and events.</p>
+        <Button asChild><Link href="/login">Log In</Link></Button>
       </div>
     );
   }
@@ -126,22 +150,55 @@ const MyFavsPage: NextPage = () => {
   return (
     <div className="container mx-auto py-8 px-4 md:px-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
-        <h1 className="text-3xl md:text-4xl font-bold mb-3 md:mb-0">My Favorite Vendors & Services</h1>
-        <Button variant="outline" asChild>
-          <Link href="/search">Discover More Vendors</Link>
-        </Button>
+        <h1 className="text-3xl md:text-4xl font-bold mb-3 md:mb-0">My Events & Favorites</h1>
+        <Button variant="outline" asChild><Link href="/search">Discover More Vendors</Link></Button>
       </div>
 
+      {/* Event Creation and Management */}
+      <Card className="mb-8 shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-2xl flex items-center"><CalendarPlus className="mr-3 text-primary"/>My Event Collections</CardTitle>
+          <CardDescription>Organize your favorite vendors by creating collections for your events.</CardDescription>
+        </CardHeader>
+        <CardContent>
+           <div className="flex items-center space-x-2 mb-4">
+              <Input 
+                placeholder="e.g., My Wedding, Summer Party..." 
+                value={newEventName}
+                onChange={(e) => setNewEventName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleCreateEvent()}
+              />
+              <Button onClick={handleCreateEvent} disabled={!newEventName.trim()}>
+                <PlusCircle className="mr-2" />Create Event
+              </Button>
+            </div>
+            <Separator />
+            {events && events.length > 0 ? (
+                <div className="mt-4 space-y-2">
+                    {events.map(event => (
+                        <Card key={event.id} className="p-3 bg-muted/50 flex justify-between items-center">
+                            <p className="font-semibold">{event.name}</p>
+                            {/* TODO: Add logic to view/manage vendors in this event */}
+                            <Button variant="outline" size="sm">Manage</Button>
+                        </Card>
+                    ))}
+                </div>
+            ) : (
+                <p className="text-muted-foreground text-center py-6">You haven't created any events yet.</p>
+            )}
+        </CardContent>
+      </Card>
+
+
+      <h2 className="text-2xl font-bold mb-6">All My Favorite Services</h2>
       {groupedFavorites.length === 0 ? (
-        <div className="text-center py-20">
-          <ShoppingBag className="mx-auto h-20 w-20 text-muted-foreground mb-8" />
+        <div className="text-center py-16 border-2 border-dashed rounded-lg">
+          <ShoppingBag className="mx-auto h-16 w-16 text-muted-foreground mb-6" />
           <h2 className="text-2xl font-semibold mb-3">Your Favorites List is Empty</h2>
           <p className="text-muted-foreground mb-6 max-w-md mx-auto">
             Start exploring and tap the heart icon on services you like to save them here for later.
           </p>
-          <Button asChild size="lg">
-            <Link href="/search">Find Vendors Now</Link>
-          </Button>
+          <Button asChild size="lg"><Link href="/search">Find Vendors Now</Link></Button>
         </div>
       ) : (
         <div className="space-y-8">
@@ -154,9 +211,7 @@ const MyFavsPage: NextPage = () => {
                             <CardTitle className="text-2xl font-semibold text-primary mb-1 sm:mb-0">{vendor.name}</CardTitle>
                         </a>
                     </Link>
-                    <Button variant="outline" size="sm" asChild>
-                        <Link href={`/vendors/${vendor.slug}`}>View Profile</Link>
-                    </Button>
+                    <Button variant="outline" size="sm" asChild><Link href={`/vendors/${vendor.slug}`}>View Profile</Link></Button>
                 </div>
                 <CardDescription>{vendor.city}, {vendor.state}</CardDescription>
               </CardHeader>
@@ -180,15 +235,32 @@ const MyFavsPage: NextPage = () => {
                       <p className="text-sm text-muted-foreground line-clamp-2">{service.description}</p>
                       {service.priceRange && <p className="text-sm font-medium text-primary mt-1">{service.priceRange}</p>}
                     </div>
-                    <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="text-muted-foreground hover:text-destructive shrink-0 mt-2 sm:mt-0"
-                        onClick={() => removeFavorite(vendor.id, service.id)}
-                        aria-label="Remove from favorites"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-muted-foreground hover:text-destructive shrink-0 mt-2 sm:mt-0"
+                            aria-label="Remove from favorites"
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </Button>
+                      </AlertDialogTrigger>
+                       <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Remove from Favorites?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to remove "{service.name}" from your favorites?
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => removeFavorite(vendor.id, service.id)}>
+                              Yes, Remove
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 ))}
                 </div>

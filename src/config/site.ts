@@ -23,13 +23,14 @@ export const siteConfig = {
   ] satisfies NavItem[],
   userNav: {
     client: [
-      { title: "My Favs", href: "/my-favs" },
+      { title: "My Events & Favs", href: "/my-favs" },
+      { title: "Inbox", href: "/inbox" },
       { title: "My Profile", href: "/profile" },
     ],
     vendor: [
       { title: "Dashboard", href: "/dashboard/vendor" },
+       { title: "Inbox", href: "/inbox" },
       { title: "My Profile", href: "/profile" },
     ],
   }
 };
-
