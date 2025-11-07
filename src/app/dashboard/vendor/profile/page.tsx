@@ -99,23 +99,27 @@ const VendorProfileSetupPage: NextPage = () => {
     }
   }, [vendorData, form]);
 
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.replace('/login?redirect=/dashboard/vendor/profile');
+    }
+  }, [isUserLoading, user, router]);
+
   const onSubmit = async (data: ProfileFormValues) => {
     if (!user || !vendorRef) return;
     
-    form.clearErrors(); // Clear previous errors
+    form.clearErrors();
 
     try {
         let profileImageUrl = vendorData?.profileImage || `https://picsum.photos/seed/${user.uid}/400/300`;
         let bannerImageUrl = vendorData?.bannerImage || `https://picsum.photos/seed/${user.uid}banner/1200/400`;
 
-        // Upload profile image if a new one is selected
         if (data.profileImageFile && data.profileImageFile.length > 0) {
             const file = data.profileImageFile[0];
             const path = `vendors/${user.uid}/profile-image-${file.name}`;
             profileImageUrl = await uploadFile(file, path);
         }
 
-        // Upload banner image if a new one is selected
         if (data.bannerImageFile && data.bannerImageFile.length > 0) {
             const file = data.bannerImageFile[0];
             const path = `vendors/${user.uid}/banner-image-${file.name}`;
@@ -152,31 +156,11 @@ const VendorProfileSetupPage: NextPage = () => {
         });
     }
   };
-
-  if (isUserLoading || isVendorLoading) {
-    return (
-      <div className="container mx-auto flex min-h-[80vh] items-center justify-center">
-        <RefreshCw className="h-10 w-10 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  // Redirect logic moved into useEffect to prevent rendering issues
-  useEffect(() => {
-    if (!isUserLoading && !user) {
-      router.replace('/login?redirect=/dashboard/vendor/profile');
-    }
-  }, [isUserLoading, user, router]);
-
-  if (!user) {
-    return null; // Return null while redirecting
-  }
   
   const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (file) {
         setProfileImagePreview(URL.createObjectURL(file));
-        // We use setValue to make sure react-hook-form is aware of the change
         form.setValue('profileImageFile', e.target.files as FileList);
       }
   };
@@ -188,6 +172,18 @@ const VendorProfileSetupPage: NextPage = () => {
         form.setValue('bannerImageFile', e.target.files as FileList);
       }
   };
+
+  if (isUserLoading || isVendorLoading) {
+    return (
+      <div className="container mx-auto flex min-h-[80vh] items-center justify-center">
+        <RefreshCw className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null; // Return null while redirecting
+  }
 
   return (
     <div className="container mx-auto max-w-4xl py-8 px-4 md:px-6">
@@ -240,7 +236,7 @@ const VendorProfileSetupPage: NextPage = () => {
                  <FormField
                     control={form.control}
                     name="profileImageFile"
-                    render={() => ( // field is not used directly, using custom handlers
+                    render={() => ( 
                     <FormItem>
                       <FormLabel>Profile Picture</FormLabel>
                         {profileImagePreview && (
@@ -259,7 +255,7 @@ const VendorProfileSetupPage: NextPage = () => {
                 <FormField
                     control={form.control}
                     name="bannerImageFile"
-                    render={() => ( // field is not used directly, using custom handlers
+                    render={() => (
                     <FormItem>
                       <FormLabel>Banner Image</FormLabel>
                         {bannerImagePreview && (
