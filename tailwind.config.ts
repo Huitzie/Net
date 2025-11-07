@@ -9,6 +9,8 @@ export default {
   ],
   theme: {
   	extend: {
+      // This is an arbitrary key to force a cache bust on deployment.
+      'force-rebuild': Date.now(),
   		colors: {
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
