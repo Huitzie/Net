@@ -8,13 +8,14 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ArrowLeft, Bot, Send, RefreshCw, Clipboard, Check } from 'lucide-react';
+import { ArrowLeft, Bot, Send, RefreshCw, Clipboard, Check, Languages } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { generateContract, type ContractInput } from '@/ai/flows/contract-flow';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import type { Service } from '@/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -28,6 +29,7 @@ const ContractsAIPage: NextPage = () => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [language, setLanguage] = useState('English');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -43,7 +45,7 @@ const ContractsAIPage: NextPage = () => {
     setMessages([
       {
         role: 'assistant',
-        content: "Hello! I'm here to help you draft a professional service agreement. I can assist you in English, Spanish, and several other languages. What language shall we use today?",
+        content: "Hello! I'm here to help you draft a professional service agreement. Please select your desired language above, or tell me which language you'd like to use.",
       },
     ]);
   }, []);
@@ -75,11 +77,20 @@ const ContractsAIPage: NextPage = () => {
     setIsLoading(true);
 
     try {
+      // Prepend language context if it's the first user message
+      const currentHistory = [...messages, userMessage];
+      const isFirstUserMessage = messages.filter(m => m.role === 'user').length === 0;
+      
+      const promptText = isFirstUserMessage 
+        ? `The user has selected the language: ${language}. User's first message is: "${input}"`
+        : input;
+
       const contractInput: ContractInput = {
-        prompt: input,
+        prompt: promptText,
         history: messages,
         services: services || [],
       };
+
       const response = await generateContract(contractInput);
       const assistantMessage: Message = { role: 'assistant', content: response };
       setMessages((prev) => [...prev, assistantMessage]);
@@ -117,13 +128,31 @@ const ContractsAIPage: NextPage = () => {
 
       <Card className="h-[75vh] flex flex-col shadow-2xl">
         <CardHeader className="border-b">
-          <CardTitle className="flex items-center text-2xl">
-            <Bot className="mr-3 h-7 w-7 text-primary" />
-            AI Contract Assistant
-          </CardTitle>
-          <CardDescription>
-            Chat with the AI to generate a service agreement. The more details you provide, the better the contract will be.
-          </CardDescription>
+            <div className="flex justify-between items-start">
+                <div>
+                    <CardTitle className="flex items-center text-2xl">
+                        <Bot className="mr-3 h-7 w-7 text-primary" />
+                        AI Contract Assistant
+                    </CardTitle>
+                    <CardDescription>
+                        Chat with the AI to generate a service agreement. The more details you provide, the better the contract will be.
+                    </CardDescription>
+                </div>
+                <div className="w-48">
+                     <Select value={language} onValueChange={setLanguage}>
+                        <SelectTrigger className="w-full">
+                            <Languages className="mr-2 h-4 w-4 text-muted-foreground"/>
+                            <SelectValue placeholder="Select Language" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="English">English</SelectItem>
+                            <SelectItem value="Spanish">Español</SelectItem>
+                            <SelectItem value="French">Français</SelectItem>
+                            <SelectItem value="Portuguese">Português</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
         </CardHeader>
 
         <CardContent className="flex-1 p-0 flex flex-col overflow-hidden">
