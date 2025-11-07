@@ -16,11 +16,11 @@ export default function HomePage() {
       <section className="w-full py-20 md:py-32 bg-gradient-to-br from-primary to-[hsl(var(--primary-dark))] text-primary-foreground relative overflow-hidden">
         <div className="absolute inset-0 opacity-20">
            <Image 
-            src="https://picsum.photos/seed/djparty/1920/1080" 
-            alt="People dancing at a party with a DJ and colorful lights" 
+            src="https://picsum.photos/seed/cheers/1920/1080" 
+            alt="People toasting with champagne glasses amidst falling confetti and festive lights" 
             fill 
             className="object-cover"
-            data-ai-hint="DJ party" 
+            data-ai-hint="party celebration" 
             priority
            />
         </div>
