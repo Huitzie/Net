@@ -1,0 +1,86 @@
+
+import type { Vendor } from '@/types';
+import images from '@/app/lib/placeholder-images.json';
+
+export const mockVendors: Vendor[] = [
+  {
+    id: 'mock-1',
+    name: 'Elegant Eats Catering',
+    slug: 'elegant-eats-catering-sample',
+    tagline: 'Gourmet catering for unforgettable moments.',
+    description:
+      'Elegant Eats Catering offers a full-service culinary experience, from intimate dinners to grand weddings. Our chefs use only the freshest local ingredients to create exquisite menus tailored to your event. We believe every meal should be a celebration.',
+    state: 'California',
+    city: 'San Francisco',
+    categoryIds: ['caterers', 'wedding-planners', 'beverage-stations'],
+    profileImage: images.elegantEats.profileImage,
+    bannerImage: images.elegantEats.bannerImage,
+    rating: 4.9,
+    reviewsCount: 132,
+    contactEmail: 'contact@eleganteats.example.com',
+  },
+  {
+    id: 'mock-2',
+    name: 'Pixel Perfect Photography',
+    slug: 'pixel-perfect-photography-sample',
+    tagline: 'Capturing your memories, one pixel at a time.',
+    description:
+      "We are a team of passionate photographers dedicated to capturing the emotion and beauty of your special day. From candid moments to formal portraits, we provide a comprehensive photography service that tells your unique story. We specialize in weddings, engagements, and family events.",
+    state: 'New York',
+    city: 'New York City',
+    categoryIds: ['photographers', 'videographers'],
+    profileImage: images.pixelPerfect.profileImage,
+    bannerImage: images.pixelPerfect.bannerImage,
+    rating: 4.8,
+    reviewsCount: 98,
+    contactEmail: 'hello@pixelperfect.example.com',
+  },
+  {
+    id: 'mock-3',
+    name: 'The Blooming Garden',
+    slug: 'the-blooming-garden-sample',
+    tagline: 'Stunning floral designs that transform spaces.',
+    description:
+      "At The Blooming Garden, we create breathtaking floral arrangements for any occasion. Our designers work with you to bring your vision to life, using fresh, beautiful flowers to craft everything from bouquets and centerpieces to large-scale installations.",
+    state: 'Florida',
+    city: 'Miami',
+    categoryIds: ['florists', 'decor-rentals'],
+    profileImage: images.bloomingGarden.profileImage,
+    bannerImage: images.bloomingGarden.bannerImage,
+    rating: 4.9,
+    reviewsCount: 76,
+    contactEmail: 'design@bloominggarden.example.com',
+  },
+  {
+    id: 'mock-4',
+    name: 'Groove Machine Live Band',
+    slug: 'groove-machine-live-band-sample',
+    tagline: 'Bringing the party to life with live music!',
+    description:
+      "Groove Machine is a high-energy 7-piece band that plays everything from classic soul and funk to modern pop hits. We guarantee to get your guests on the dance floor and keep them there all night long. Perfect for weddings, corporate events, and private parties.",
+    state: 'Texas',
+    city: 'Austin',
+    categoryIds: ['bands', 'djs', 'musicians-solo'],
+    profileImage: images.grooveMachine.profileImage,
+    bannerImage: images.grooveMachine.bannerImage,
+    rating: 5.0,
+    reviewsCount: 112,
+    contactEmail: 'booking@groovemachinelive.example.com',
+  },
+  {
+    id: 'mock-5',
+    name: 'Taco Fiesta Truck',
+    slug: 'taco-fiesta-truck-sample',
+    tagline: 'Authentic street tacos for any event.',
+    description:
+      'Add a fun and delicious twist to your event with Taco Fiesta! We serve authentic, made-to-order street tacos from our vibrant food truck. Our menu features a variety of meats, fresh salsas, and homemade tortillas. It\'s a guaranteed crowd-pleaser!',
+    state: 'California',
+    city: 'Los Angeles',
+    categoryIds: ['taco-trucks', 'food-trucks', 'taqueros'],
+    profileImage: images.tacoFiesta.profileImage,
+    bannerImage: images.tacoFiesta.bannerImage,
+    rating: 4.7,
+    reviewsCount: 204,
+    contactEmail: 'fiesta@tacotruck.example.com',
+  },
+];

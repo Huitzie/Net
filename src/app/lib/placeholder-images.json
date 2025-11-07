@@ -1,0 +1,23 @@
+
+{
+  "elegantEats": {
+    "profileImage": "https://images.unsplash.com/photo-1551218808-94e220e084d2?q=80&w=600&auto=format&fit=crop",
+    "bannerImage": "https://images.unsplash.com/photo-1555243896-c709bfa0b564?q=80&w=1200&auto=format&fit=crop"
+  },
+  "pixelPerfect": {
+    "profileImage": "https://images.unsplash.com/photo-1520341280432-4749d4d7e179?q=80&w=600&auto=format&fit=crop",
+    "bannerImage": "https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=1200&auto=format&fit=crop"
+  },
+  "bloomingGarden": {
+    "profileImage": "https://images.unsplash.com/photo-1587814213271-7a6628b7ef40?q=80&w=600&auto=format&fit=crop",
+    "bannerImage": "https://images.unsplash.com/photo-1528569936494-6a4a6a5b3558?q=80&w=1200&auto=format&fit=crop"
+  },
+  "grooveMachine": {
+    "profileImage": "https://images.unsplash.com/photo-1524230659267-39921e87def0?q=80&w=600&auto=format&fit=crop",
+    "bannerImage": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?q=80&w=1200&auto=format&fit=crop"
+  },
+  "tacoFiesta": {
+    "profileImage": "https://images.unsplash.com/photo-1552332386-f8dd00dc2f85?q=80&w=600&auto=format&fit=crop",
+    "bannerImage": "https://images.unsplash.com/photo-1620058922258-50967366f630?q=80&w=1200&auto=format&fit=crop"
+  }
+}

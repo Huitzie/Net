@@ -2,7 +2,7 @@
 'use client';
 
 import type { NextPage } from 'next';
-import { Suspense, useState, useEffect } from 'react';
+import { Suspense, useState, useEffect, useMemo } from 'react';
 import SearchForm from '@/components/search/search-form';
 import VendorCard from '@/components/vendors/vendor-card';
 import { getCategoryById } from '@/data/categories';
@@ -15,6 +15,7 @@ import { useSearchParams } from 'next/navigation';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, getDocs, limit, startAfter, DocumentData, Query } from 'firebase/firestore';
 import type { Vendor } from '@/types';
+import { mockVendors } from '@/data/mock-vendors';
 
 
 const VENDOR_PAGE_SIZE = 20;
@@ -62,11 +63,17 @@ const SearchResults = () => {
 
         const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
         setLastVisible(lastDoc);
-        setVendors(fetchedVendors);
+        
+        // Prepend mock vendors to the fetched vendors
+        const combinedVendors = [...mockVendors, ...fetchedVendors.filter(v => !mockVendors.some(mv => mv.id === v.id))];
+        setVendors(combinedVendors);
+
         setHasMore(fetchedVendors.length === VENDOR_PAGE_SIZE);
 
       } catch (error) {
         console.error("Error fetching vendors:", error);
+        // If there's an error, still show mock vendors
+        setVendors(mockVendors);
       } finally {
         setIsLoading(false);
       }
@@ -89,7 +96,7 @@ const SearchResults = () => {
       
       const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
       setLastVisible(lastDoc);
-      setVendors(prev => [...prev, ...newVendors]);
+      setVendors(prev => [...prev, ...newVendors.filter(v => !prev.some(pv => pv.id === v.id))]);
       setHasMore(newVendors.length === VENDOR_PAGE_SIZE);
     } catch (error) {
         console.error("Error fetching more vendors:", error);
@@ -98,15 +105,17 @@ const SearchResults = () => {
     }
   }
 
-  // Client-side keyword filtering
+  // Client-side keyword filtering - now also filters mock vendors
   const displayedVendors = useMemo(() => {
-    if (!keyword) return vendors;
+    const allVendors = [...mockVendors, ...vendors.filter(v => !mockVendors.some(mv => mv.id === v.id))];
+    if (!keyword) return allVendors;
+    
     const keywordLower = keyword.toLowerCase();
-    return vendors.filter(v => 
+    return allVendors.filter(v => 
       v.name.toLowerCase().includes(keywordLower) ||
       v.description.toLowerCase().includes(keywordLower) ||
       (v.tagline && v.tagline.toLowerCase().includes(keywordLower)) ||
-      (v.categoryIds && v.categoryIds.some(catId => catId.toLowerCase().includes(keywordLower)))
+      (v.categoryIds && v.categoryIds.some(catId => getCategoryById(catId)?.name.toLowerCase().includes(keywordLower)))
     );
   }, [vendors, keyword]);
 
@@ -122,60 +131,76 @@ const SearchResults = () => {
   }
 
   const category = categoryId ? getCategoryById(categoryId) : null;
+  
+  // Show mock vendors even if loading or no results
   const totalFound = displayedVendors.length;
+  const realVendorsFound = displayedVendors.filter(v => !v.id.startsWith('mock-')).length;
 
-  if (isLoading && totalFound === 0) {
-      return <LoadingResults />;
-  }
-
-  if (totalFound === 0 && !isLoading) {
+  if (totalFound === mockVendors.length && realVendorsFound === 0 && !isLoading) {
     const categoryName = category ? category.name : "this type of";
     const shareText = `Looking for a ${categoryName} vendor in ${city}, ${state}? Venue Vendors needs you! If you provide this service, sign up to get hired: ${process.env.NEXT_PUBLIC_APP_URL || 'https://venuevendors.example.com'}/signup?type=vendor`;
     const twitterShareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
     const facebookShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(process.env.NEXT_PUBLIC_APP_URL || 'https://venuevendors.example.com')}&quote=${encodeURIComponent(shareText)}`;
 
     return (
-      <div className="text-center py-10">
-        <Sparkles className="mx-auto h-16 w-16 text-primary mb-6" />
-        <h2 className="text-3xl font-semibold mb-3">No Vendors Found</h2>
-        <p className="text-lg text-muted-foreground mb-6">
-          Sorry, we couldn't find any {category ? `${category.name} ` : ''}vendors in {city}, {state} matching your criteria.
-        </p>
-        <Card className="max-w-md mx-auto bg-secondary/30 p-6">
-          <CardContent className="flex flex-col items-center gap-4">
-            <p className="font-semibold">Know a vendor or are one yourself?</p>
-            <Button asChild className="w-full">
-              <Link href="/signup?type=vendor">Sign Up Your Service!</Link>
-            </Button>
-            <p className="text-sm text-muted-foreground">Or share this to help us find them:</p>
-            <div className="flex space-x-3">
-              <Button variant="outline" asChild>
-                <a href={twitterShareUrl} target="_blank" rel="noopener noreferrer">
-                  <Share2 className="mr-2 h-4 w-4" /> Share on X
-                </a>
-              </Button>
-              <Button variant="outline" asChild>
-                <a href={facebookShareUrl} target="_blank" rel="noopener noreferrer">
-                  <Share2 className="mr-2 h-4 w-4" /> Share on Facebook
-                </a>
-              </Button>
+      <>
+        <div className="mb-8">
+            <h2 className="text-2xl font-semibold mb-6">
+                Showing {mockVendors.length} Sample Vendors in {city}, {state}
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {mockVendors.map((vendor) => (
+                    <VendorCard key={vendor.id} vendor={vendor} />
+                ))}
             </div>
-          </CardContent>
-        </Card>
-         <p className="mt-8 text-muted-foreground">
-            Can't find the right category?{' '}
-            <Link href="/suggest-category" className="text-primary hover:underline">
-              Suggest a new one!
-            </Link>
-          </p>
-      </div>
+        </div>
+
+        <div className="text-center py-10 mt-8 border-t">
+            <Sparkles className="mx-auto h-16 w-16 text-primary mb-6" />
+            <h2 className="text-3xl font-semibold mb-3">No Real Vendors Found... Yet!</h2>
+            <p className="text-lg text-muted-foreground mb-6">
+            Help us grow! Be the first {category ? `${category.name} ` : ''}vendor in {city}, {state}.
+            </p>
+            <Card className="max-w-md mx-auto bg-secondary/30 p-6">
+            <CardContent className="flex flex-col items-center gap-4">
+                <p className="font-semibold">Know a vendor or are one yourself?</p>
+                <Button asChild className="w-full">
+                <Link href="/signup?type=vendor">Sign Up Your Service!</Link>
+                </Button>
+                <p className="text-sm text-muted-foreground">Or share this to help us find them:</p>
+                <div className="flex space-x-3">
+                <Button variant="outline" asChild>
+                    <a href={twitterShareUrl} target="_blank" rel="noopener noreferrer">
+                    <Share2 className="mr-2 h-4 w-4" /> Share on X
+                    </a>
+                </Button>
+                <Button variant="outline" asChild>
+                    <a href={facebookShareUrl} target="_blank" rel="noopener noreferrer">
+                    <Share2 className="mr-2 h-4 w-4" /> Share on Facebook
+                    </a>
+                </Button>
+                </div>
+            </CardContent>
+            </Card>
+            <p className="mt-8 text-muted-foreground">
+                Can't find the right category?{' '}
+                <Link href="/suggest-category" className="text-primary hover:underline">
+                Suggest a new one!
+                </Link>
+            </p>
+        </div>
+      </>
     );
+  }
+
+  if (isLoading && totalFound === 0) {
+      return <LoadingResults />;
   }
 
   return (
     <div>
       <h2 className="text-2xl font-semibold mb-6">
-        Showing {totalFound} {category ? `${category.name} ` : ''}Vendors in {city}, {state}
+        Showing {totalFound} vendors in {city}, {state}
         {keyword && ` matching "${keyword}"`}
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
