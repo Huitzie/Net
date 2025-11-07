@@ -22,7 +22,7 @@ const Footer: FC = () => {
           <div className="text-center md:text-right">
              <div className="flex flex-col md:flex-row gap-2 md:gap-4 justify-center md:justify-end mb-2">
                 <Link href="/about" className="text-sm text-primary-foreground/80 hover:text-primary-foreground">About Us</Link>
-                <Link href="/contact" className="text-sm text-primary-foreground/80 hover:text-primary-foreground">Contact</Link>
+                <a href="mailto:info@venuevendors.org" className="text-sm text-primary-foreground/80 hover:text-primary-foreground">Contact Us</a>
                 <Link href="/terms" className="text-sm text-primary-foreground/80 hover:text-primary-foreground">Terms & Conditions</Link>
              </div>
              <p className="text-sm text-primary-foreground/70">
