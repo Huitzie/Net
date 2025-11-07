@@ -161,9 +161,15 @@ const VendorProfileSetupPage: NextPage = () => {
     );
   }
 
+  // Redirect logic moved into useEffect to prevent rendering issues
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.replace('/login?redirect=/dashboard/vendor/profile');
+    }
+  }, [isUserLoading, user, router]);
+
   if (!user) {
-    router.replace('/login?redirect=/dashboard/vendor/profile');
-    return null;
+    return null; // Return null while redirecting
   }
   
   const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -350,4 +356,3 @@ const VendorProfileSetupPage: NextPage = () => {
 };
 
 export default VendorProfileSetupPage;
-
