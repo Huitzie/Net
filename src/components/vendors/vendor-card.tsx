@@ -19,20 +19,23 @@ const VendorCard: React.FC<VendorCardProps> = ({ vendor }) => {
   const IconComponent = primaryCategory?.icon || Users;
 
   return (
-    <Link href={`/vendors/${vendor.slug}`} className="block group" legacyBehavior>
-      <a className="h-full">
+    <div className="h-full group">
         <Card className="h-full flex flex-col overflow-hidden hover:shadow-xl transition-shadow duration-300 ease-in-out transform group-hover:-translate-y-1">
-          <div className="relative w-full h-48">
-            <Image
-              src={vendor.profileImage || 'https://picsum.photos/seed/placeholder/400/300'}
-              alt={vendor.name}
-              fill
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
-              data-ai-hint="vendor service"
-            />
-          </div>
+          <Link href={`/vendors/${vendor.slug}`} className="block">
+            <div className="relative w-full h-48">
+              <Image
+                src={vendor.profileImage || 'https://picsum.photos/seed/placeholder/400/300'}
+                alt={vendor.name}
+                fill
+                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                data-ai-hint="vendor service"
+              />
+            </div>
+          </Link>
           <CardHeader className="pb-2">
-            <CardTitle className="text-xl font-semibold truncate group-hover:text-primary">{vendor.name}</CardTitle>
+            <CardTitle className="text-xl font-semibold truncate">
+              <Link href={`/vendors/${vendor.slug}`} className="group-hover:text-primary">{vendor.name}</Link>
+            </CardTitle>
             {vendor.tagline && <CardDescription className="text-sm truncate">{vendor.tagline}</CardDescription>}
           </CardHeader>
           <CardContent className="flex-grow space-y-2 text-sm">
@@ -72,8 +75,7 @@ const VendorCard: React.FC<VendorCardProps> = ({ vendor }) => {
              </Button>
           </CardFooter>
         </Card>
-      </a>
-    </Link>
+    </div>
   );
 };
 
