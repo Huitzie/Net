@@ -16,7 +16,7 @@ export default function HomePage() {
       <section className="w-full py-20 md:py-32 bg-gradient-to-br from-primary to-[hsl(var(--primary-dark))] text-primary-foreground relative overflow-hidden">
         <div className="absolute inset-0 opacity-20">
            <Image 
-            src="/hero-image.jpg" 
+            src="https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=1770&auto=format&fit=crop" 
             alt="People toasting with champagne glasses amidst falling confetti and festive lights" 
             fill 
             className="object-cover"
