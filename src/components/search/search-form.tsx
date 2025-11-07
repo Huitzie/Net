@@ -5,7 +5,7 @@ import  { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -61,14 +61,6 @@ export default function SearchForm({ initialValues }: SearchFormProps) {
 
   const selectedState = form.watch("state");
 
-  // State for category autocomplete
-  const [categorySearchText, setCategorySearchText] = useState<string>("");
-  const [categorySuggestions, setCategorySuggestions] = useState<Category[]>([]);
-  const [isSuggestionsVisible, setIsSuggestionsVisible] = useState<boolean>(false);
-  const categoryInputRef = useRef<HTMLInputElement>(null);
-  const suggestionsRef = useRef<HTMLDivElement>(null);
-
-
   useEffect(() => {
     async function fetchStates() {
       const fetchedStates = await getStates();
@@ -120,101 +112,15 @@ export default function SearchForm({ initialValues }: SearchFormProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedState, initialValues?.city, initialValues?.state, form.setValue, form.getValues]);
 
-  useEffect(() => {
-    if (initialValues?.category && initialValues.category !== ALL_CATEGORIES_VALUE) {
-      const initialCategoryObject = allCategoriesList.find(c => c.id === initialValues.category);
-      if (initialCategoryObject) {
-        setCategorySearchText(initialCategoryObject.name);
-        form.setValue('category', initialCategoryObject.id, { shouldValidate: true, shouldDirty: true });
-      } else {
-        setCategorySearchText(""); 
-        form.setValue('category', ALL_CATEGORIES_VALUE);
-      }
-    } else if (initialValues?.category === ALL_CATEGORIES_VALUE) {
-       setCategorySearchText(""); 
-       form.setValue('category', ALL_CATEGORIES_VALUE);
-    } else {
-      setCategorySearchText("");
-    }
-  }, [initialValues?.category, form]);
-
-
-  const handleCategoryInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const searchText = event.target.value;
-    setCategorySearchText(searchText);
-    form.setValue('category', ALL_CATEGORIES_VALUE); // Reset to "All" until a suggestion is picked
-
-    if (searchText.trim() === "") {
-      setCategorySuggestions(allCategoriesList); // Show all if input is cleared or only contains spaces
-      setIsSuggestionsVisible(true); // Keep suggestions visible to show all
-    } else {
-      const filtered = allCategoriesList.filter(cat =>
-        cat.name.toLowerCase().includes(searchText.toLowerCase())
-      );
-      setCategorySuggestions(filtered);
-      setIsSuggestionsVisible(true);
-    }
-  };
-
-  const handleSuggestionClick = (category: Category) => {
-    setCategorySearchText(category.name);
-    form.setValue('category', category.id);
-    setIsSuggestionsVisible(false);
-  };
-  
-  const handleAllCategoriesClick = () => {
-    setCategorySearchText(""); // Or a placeholder like "All Categories"
-    form.setValue('category', ALL_CATEGORIES_VALUE);
-    setIsSuggestionsVisible(false);
-  };
-
-
-  const handleCategoryInputFocus = () => {
-     if (categorySearchText.trim() === "" && !isSuggestionsVisible) {
-        setCategorySuggestions(allCategoriesList); // Show all categories if input is empty on focus
-     }
-    setIsSuggestionsVisible(true);
-  };
-  
-  useEffect(() => {
-      function handleClickOutside(event: MouseEvent) {
-          if (
-              categoryInputRef.current && !categoryInputRef.current.contains(event.target as Node) &&
-              suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)
-          ) {
-              setIsSuggestionsVisible(false);
-          }
-      }
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => {
-          document.removeEventListener("mousedown", handleClickOutside);
-      };
-  }, [categoryInputRef, suggestionsRef]);
-
-
   function onSubmit(data: SearchFormValues) {
-    const { state, city, keyword } = data;
-    let categoryToSearch = form.getValues('category'); // From RHF, reflects selection or ALL_CATEGORIES_VALUE
-
-    // If user typed something but form's category value is still "All" (i.e., no suggestion clicked)
-    if (categorySearchText && (categoryToSearch === ALL_CATEGORIES_VALUE || !categoryToSearch)) {
-      const matchedCategoryByName = allCategoriesList.find(c => c.name.toLowerCase() === categorySearchText.toLowerCase());
-      if (matchedCategoryByName) {
-        // User typed an exact category name, use its ID
-        categoryToSearch = matchedCategoryByName.id;
-      } else {
-        // User typed a custom category name not in the list
-        router.push(`/suggest-category?name=${encodeURIComponent(categorySearchText)}`);
-        return; // Stop form submission, redirect to suggestion page
-      }
-    }
-
+    const { state, city, keyword, category } = data;
+    
     const params = new URLSearchParams();
     if (state) params.append("state", state);
     if (city) params.append("city", city);
     
-    if (categoryToSearch && categoryToSearch !== ALL_CATEGORIES_VALUE) {
-      params.append("category", categoryToSearch);
+    if (category && category !== ALL_CATEGORIES_VALUE) {
+      params.append("category", category);
     }
 
     if (keyword) params.append("keyword", keyword);
@@ -286,51 +192,29 @@ export default function SearchForm({ initialValues }: SearchFormProps) {
           )}
         />
         
-        {/* Category Autocomplete Input */}
-        <FormItem>
-          <FormLabel>Category</FormLabel>
-          <FormControl>
-            <div className="relative">
-              <Input
-                ref={categoryInputRef}
-                placeholder="Type or select a category"
-                value={categorySearchText}
-                onChange={handleCategoryInputChange}
-                onFocus={handleCategoryInputFocus}
-                className="text-primary"
-              />
-              {isSuggestionsVisible && (categorySuggestions.length > 0 || categorySearchText.trim() === "") && (
-                <div ref={suggestionsRef} className="absolute z-10 w-full bg-card border mt-1 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                  <ul>
-                    <li
-                      className="p-2 hover:bg-accent cursor-pointer text-primary"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        handleAllCategoriesClick();
-                      }}
-                    >
-                      All Categories
-                    </li>
-                    {categorySuggestions.map((cat) => (
-                      <li
-                        key={cat.id}
-                        className="p-2 hover:bg-accent cursor-pointer text-primary"
-                        onMouseDown={(e) => { 
-                          e.preventDefault();
-                          handleSuggestionClick(cat);
-                        }}
-                      >
-                        {cat.name}
-                      </li>
+         <FormField
+          control={form.control}
+          name="category"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Category</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl>
+                  <SelectTrigger className="text-primary">
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                    <SelectItem value={ALL_CATEGORIES_VALUE}>All Categories</SelectItem>
+                    {allCategoriesList.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                     ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          </FormControl>
-          {/* We can use form.formState.errors.category?.message if schema validation was set up for the raw input */}
-          {/* <FormMessage />  */}
-        </FormItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         
         <Button type="submit" className="w-full lg:col-span-1 md:col-span-2 col-span-1 bg-accent hover:bg-accent/90">
           <Search className="mr-2 h-4 w-4" /> Search Vendors
