@@ -33,7 +33,6 @@ export default function VendorDashboardLayout({
 
   useEffect(() => {
     // If loading is finished and there's no user, redirect to login.
-    // This is now a side-effect and won't cause the hook error.
     if (!isLoading && !user) {
       router.replace('/login?type=vendor');
     }
@@ -63,7 +62,7 @@ export default function VendorDashboardLayout({
         <p className="mt-2 max-w-md text-muted-foreground">
           To get started and list your services, you need to create your public vendor profile.
         </p>
-        <Link href="/dashboard/vendor/profile" passHref>
+        <Link href="/dashboard/vendor/profile">
           <Button className="mt-6">
             Create Your Profile
           </Button>
