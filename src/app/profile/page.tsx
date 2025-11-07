@@ -4,11 +4,11 @@ import type { NextPage } from 'next';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { doc, updateDoc, collection, query, where, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Edit3, Mail, UserCircle2, Shield, RefreshCw, KeyRound, Save, CalendarPlus, PlusCircle, Inbox } from 'lucide-react';
+import { Edit3, Mail, UserCircle2, Shield, RefreshCw, KeyRound, Save, CalendarPlus, PlusCircle, Inbox, Briefcase } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/firebase';
 import { sendPasswordResetEmail, updateProfile } from 'firebase/auth';
@@ -142,6 +142,16 @@ const UserProfilePage: NextPage = () => {
     setIsEventDialogOpen(false);
   };
 
+  const handleBecomeVendor = () => {
+    if (!userProfileRef) return;
+    updateDocumentNonBlocking(userProfileRef, { accountType: 'vendor' });
+    toast({
+      title: "Account Upgraded!",
+      description: "You are now a vendor. Let's create your public profile.",
+    });
+    router.push('/dashboard/vendor/profile');
+  };
+
 
   if (isLoading || !user) {
     return (
@@ -215,6 +225,26 @@ const UserProfilePage: NextPage = () => {
                 </div>
                 </CardContent>
             </Card>
+
+            {accountType === 'client' && (
+                <Card className="shadow-lg">
+                    <CardHeader>
+                        <CardTitle className="flex items-center">
+                            <Briefcase className="mr-2 text-primary" />
+                            Grow Your Business
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm text-muted-foreground mb-4">
+                            Ready to offer your services? Convert your account to a vendor profile to get started.
+                        </p>
+                        <Button className="w-full bg-accent hover:bg-accent/90" onClick={handleBecomeVendor}>
+                            Become a Vendor
+                        </Button>
+                    </CardContent>
+                </Card>
+            )}
+
           </div>
 
         {/* Right Column: Inbox & Events/Bookings */}

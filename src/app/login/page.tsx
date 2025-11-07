@@ -7,29 +7,25 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import type { UserAccountType } from "@/types";
-import { useAuth } from "@/firebase";
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, AuthErrorCodes } from "firebase/auth";
+import type { User as UserType } from "@/types";
+import { useAuth, useFirestore } from "@/firebase";
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, AuthErrorCodes, getAuth } from "firebase/auth";
 import { Separator } from "@/components/ui/separator";
+import { doc, getDoc } from "firebase/firestore";
 
 const loginFormSchema = z.object({
   email: z.string().email("Invalid email address."),
   password: z.string().min(6, "Password must be at least 6 characters."),
-  accountType: z.enum(["client", "vendor"], {
-    required_error: "You need to select an account type.",
-  }),
 });
 
 type LoginFormValues = z.infer<typeof loginFormSchema>;
@@ -40,6 +36,7 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 export default function LoginPage() {
   const auth = useAuth();
+  const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -48,9 +45,26 @@ export default function LoginPage() {
     defaultValues: {
       email: "",
       password: "",
-      accountType: "client",
     },
   });
+
+  const redirectUser = async (user: import("firebase/auth").User) => {
+    if (!firestore) return;
+    const userDocRef = doc(firestore, "users", user.uid);
+    const userDoc = await getDoc(userDocRef);
+
+    if (userDoc.exists()) {
+      const userData = userDoc.data() as UserType;
+      if (userData.accountType === 'vendor') {
+        router.push("/dashboard/vendor");
+      } else {
+        router.push("/");
+      }
+    } else {
+      // Default redirection if profile isn't found (e.g., legacy user)
+      router.push("/");
+    }
+  };
 
   async function onSubmit(data: LoginFormValues) {
     try {
@@ -60,12 +74,7 @@ export default function LoginPage() {
             title: "Login Successful!",
             description: `Welcome back, ${user.displayName || user.email}!`,
         });
-        // TODO: After login, check for user profile in Firestore to get accountType
-        if (data.accountType === 'vendor') {
-            router.push("/dashboard/vendor");
-        } else {
-            router.push("/");
-        }
+        await redirectUser(user);
     } catch (error: any) {
         console.error("Login Error:", error);
         let description = "An unexpected error occurred.";
@@ -92,9 +101,7 @@ export default function LoginPage() {
         title: "Google Sign-In Successful!",
         description: `Welcome, ${user.displayName || user.email}!`,
       });
-      // TODO: After login, redirect based on whether they have a client or vendor profile in Firestore.
-      // For now, we'll default to the client dashboard.
-      router.push("/");
+      await redirectUser(user);
     } catch (error: any) {
       console.error("Google Sign-In Error:", error);
       toast({
@@ -137,43 +144,6 @@ export default function LoginPage() {
                     <FormControl>
                       <Input type="password" placeholder="••••••••" {...field} />
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="accountType"
-                render={({ field }) => (
-                  <FormItem className="space-y-3">
-                    <FormLabel>I am a...</FormLabel>
-                    <FormControl>
-                      <RadioGroup
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        className="flex flex-col space-y-1 md:flex-row md:space-x-4 md:space-y-0"
-                      >
-                        <FormItem className="flex items-center space-x-3 space-y-0">
-                          <FormControl>
-                            <RadioGroupItem value="client" />
-                          </FormControl>
-                          <FormLabel className="font-normal">
-                            Client (Looking for vendors)
-                          </FormLabel>
-                        </FormItem>
-                        <FormItem className="flex items-center space-x-3 space-y-0">
-                          <FormControl>
-                            <RadioGroupItem value="vendor" />
-                          </FormControl>
-                          <FormLabel className="font-normal">
-                            Vendor (Offering services)
-                          </FormLabel>
-                        </FormItem>
-                      </RadioGroup>
-                    </FormControl>
-                    <FormDescription className="text-xs">
-                        This helps us direct you to the right dashboard after login.
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
