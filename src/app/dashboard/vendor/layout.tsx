@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { RefreshCw, TriangleAlert } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { useEffect } from 'react';
 
 
 export default function VendorDashboardLayout({
@@ -30,6 +31,15 @@ export default function VendorDashboardLayout({
 
   const isLoading = isUserLoading || isProfileLoading;
 
+  useEffect(() => {
+    // If loading is finished and there's no user, redirect to login.
+    // This is now a side-effect and won't cause the hook error.
+    if (!isLoading && !user) {
+      router.replace('/login?type=vendor');
+    }
+  }, [isLoading, user, router]);
+
+
   if (isLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
@@ -38,16 +48,14 @@ export default function VendorDashboardLayout({
     );
   }
   
-  // If user is loaded but not logged in, or is not a vendor
+  // If still loading or no user, render nothing while useEffect handles redirect.
   if (!user) {
-    router.replace('/login?type=vendor');
     return null;
   }
   
   // If user is a vendor but has no profile, prompt to create one,
   // UNLESS they are already on the profile creation page.
-  if (user && !vendorProfile && pathname !== '/dashboard/vendor/profile') {
-    // If user is a vendor but has no profile, prompt to create one
+  if (!vendorProfile && pathname !== '/dashboard/vendor/profile') {
      return (
       <div className="container mx-auto flex min-h-[80vh] flex-col items-center justify-center text-center">
         <TriangleAlert className="h-12 w-12 text-primary" />
