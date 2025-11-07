@@ -8,7 +8,6 @@ import { Toaster } from '@/components/ui/toaster';
 import { Providers } from '@/components/providers';
 import { FirebaseClientProvider } from '@/firebase';
 import CookieBanner from '@/components/layout/cookie-banner';
-import { AccessibilityToolbar } from '@/components/layout/accessibility-toolbar';
 import { ThemeProvider } from '@/lib/theme';
 
 
@@ -41,7 +40,6 @@ export default function RootLayout({
               <Footer />
               <Toaster />
               <CookieBanner />
-              <AccessibilityToolbar />
             </Providers>
           </FirebaseClientProvider>
         </ThemeProvider>

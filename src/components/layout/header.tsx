@@ -4,19 +4,22 @@ import { siteConfig, type NavItem } from '@/config/site';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LogIn, LogOut, User, ListChecks, LayoutDashboard, Heart, Menu, Search, Sparkles } from 'lucide-react';
+import { LogIn, LogOut, User, ListChecks, LayoutDashboard, Heart, Menu, Search, Sparkles, HelpCircle, Accessibility } from 'lucide-react';
 import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
 // import ConfettiPattern from '@/components/ui/confetti-pattern'; // Not used
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
+import { AccessibilitySheet } from './accessibility-sheet';
 
 const Header = () => {
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const [isAccessibilitySheetOpen, setIsAccessibilitySheetOpen] = React.useState(false);
+
 
   // This is a placeholder. In a real app, you'd fetch this from your database
   // after the user logs in.
@@ -115,6 +118,16 @@ const Header = () => {
               <Link href={item.href}>{item.title}</Link>
             </Button>
           ))}
+          <Button
+            variant="ghost"
+            className="justify-start text-lg font-medium text-foreground hover:text-primary flex items-center gap-2"
+            onClick={() => {
+              setIsAccessibilitySheetOpen(true);
+              setIsMobileMenuOpen(false);
+            }}
+          >
+            <Accessibility className="h-5 w-5" /> Accessibility
+          </Button>
           <hr className="my-3"/>
           {user ? (
             <>
@@ -154,6 +167,7 @@ const Header = () => {
   );
 
   return (
+    <>
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-header-background text-header-foreground shadow-md">
       <div className="container mx-auto flex h-20 items-center justify-between px-4 md:px-6 relative">
         <div className="flex items-center space-x-2 md:space-x-6">
@@ -181,11 +195,29 @@ const Header = () => {
               <span className="sr-only">Search</span>
             </Link>
           </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-header-foreground hover:bg-header-foreground/10 hover:text-header-foreground hidden md:inline-flex">
+                    <HelpCircle className="h-5 w-5" />
+                    <span className="sr-only">Help</span>
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={() => setIsAccessibilitySheetOpen(true)}>
+                    <Accessibility className="mr-2 h-4 w-4" />
+                    <span>Accessibility</span>
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           {renderUserMenu()}
           <MobileNav />
         </div>
       </div>
     </header>
+    <AccessibilitySheet open={isAccessibilitySheetOpen} onOpenChange={setIsAccessibilitySheetOpen} />
+    </>
   );
 };
 
