@@ -59,6 +59,11 @@ const ContractsAIPage: NextPage = () => {
         }, 100);
     }
   };
+  
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isLoading]);
+
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,7 +73,6 @@ const ContractsAIPage: NextPage = () => {
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
-    scrollToBottom();
 
     try {
       const contractInput: ContractInput = {
@@ -88,7 +92,6 @@ const ContractsAIPage: NextPage = () => {
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
-      scrollToBottom();
     }
   };
 
@@ -123,7 +126,7 @@ const ContractsAIPage: NextPage = () => {
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="flex-1 p-0 flex flex-col">
+        <CardContent className="flex-1 p-0 flex flex-col overflow-hidden">
             <ScrollArea className="flex-1 p-6" ref={scrollAreaRef}>
                 <div className="space-y-6">
                 {messages.map((message, index) => (
@@ -191,3 +194,4 @@ const ContractsAIPage: NextPage = () => {
 };
 
 export default ContractsAIPage;
+
