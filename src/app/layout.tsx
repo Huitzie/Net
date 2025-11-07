@@ -7,6 +7,7 @@ import Footer from '@/components/layout/footer'; // Added import
 import { Toaster } from '@/components/ui/toaster';
 import { Providers } from '@/components/providers';
 import { FirebaseClientProvider } from '@/firebase';
+import CookieBanner from '@/components/layout/cookie-banner';
 
 
 const poppins = Poppins({
@@ -36,6 +37,7 @@ export default function RootLayout({
             </main>
             <Footer /> {/* Added Footer component */}
             <Toaster />
+            <CookieBanner />
           </Providers>
         </FirebaseClientProvider>
       </body>
