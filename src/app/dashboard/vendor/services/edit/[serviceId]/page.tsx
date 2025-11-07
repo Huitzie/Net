@@ -25,7 +25,7 @@ import { uploadFile, deleteFileFromUrl } from '@/firebase/storage';
 
 
 const MAX_FILE_SIZE_MB = 5;
-const MAX_TOTAL_FILES = 5;
+const MAX_TOTAL_FILES = 12;
 
 const serviceFormSchema = z.object({
   name: z.string().min(3, { message: "Service name must be at least 3 characters." }).max(100, { message: "Service name too long." }),
@@ -286,7 +286,7 @@ const EditServicePage: NextPage = () => {
               {existingPhotos.length > 0 && (
                 <FormItem>
                   <FormLabel>Current Photos</FormLabel>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                     {existingPhotos.map((photoUrl, index) => (
                       <div key={`existing-${index}`} className="relative group aspect-square border rounded-md overflow-hidden shadow">
                         <Image src={photoUrl} alt={`Existing photo ${index + 1}`} fill style={{objectFit: 'cover'}} data-ai-hint="service photo" />
@@ -331,7 +331,7 @@ const EditServicePage: NextPage = () => {
                     {newPhotoPreviews.length > 0 && (
                       <div className="mt-3 space-y-2">
                         <p className="text-sm font-medium">New photos to upload:</p>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                           {newPhotoPreviews.map((previewUrl, index) => (
                              <div key={`new-${index}`} className="relative group aspect-square border rounded-md overflow-hidden shadow">
                               <Image src={previewUrl} alt={`New photo preview ${index + 1}`} fill style={{objectFit: 'cover'}} data-ai-hint="service photo preview" />
@@ -382,5 +382,3 @@ const EditServicePage: NextPage = () => {
 };
 
 export default EditServicePage;
-
-    

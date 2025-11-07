@@ -25,7 +25,7 @@ import { uploadFile } from '@/firebase/storage';
 
 
 const MAX_FILE_SIZE_MB = 5;
-const MAX_TOTAL_FILES = 5;
+const MAX_TOTAL_FILES = 12;
 
 const serviceFormSchema = z.object({
   name: z.string().min(3, { message: "Service name must be at least 3 characters." }).max(100, { message: "Service name too long." }),
@@ -258,7 +258,7 @@ const AddNewServicePage: NextPage = () => {
                      {photoPreviews.length > 0 && (
                       <div className="mt-3 space-y-2">
                         <p className="text-sm font-medium">Selected photo previews:</p>
-                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                           {photoPreviews.map((previewUrl, index) => (
                             <div key={index} className="relative group aspect-square border rounded-md overflow-hidden shadow">
                               <Image src={previewUrl} alt={`Photo preview ${index + 1}`} fill style={{objectFit: 'cover'}} data-ai-hint="photo preview" />
@@ -311,5 +311,3 @@ const AddNewServicePage: NextPage = () => {
 };
 
 export default AddNewServicePage;
-
-    

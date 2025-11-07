@@ -168,14 +168,19 @@ const VendorProfileSetupPage: NextPage = () => {
   
   const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
-      if (file) setProfileImagePreview(URL.createObjectURL(file));
-      form.setValue('profileImageFile', e.target.files!);
+      if (file) {
+        setProfileImagePreview(URL.createObjectURL(file));
+        // We use setValue to make sure react-hook-form is aware of the change
+        form.setValue('profileImageFile', e.target.files as FileList);
+      }
   };
 
   const handleBannerImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
-      if (file) setBannerImagePreview(URL.createObjectURL(file));
-      form.setValue('bannerImageFile', e.target.files!);
+       if (file) {
+        setBannerImagePreview(URL.createObjectURL(file));
+        form.setValue('bannerImageFile', e.target.files as FileList);
+      }
   };
 
   return (
@@ -229,7 +234,7 @@ const VendorProfileSetupPage: NextPage = () => {
                  <FormField
                     control={form.control}
                     name="profileImageFile"
-                    render={({ field }) => (
+                    render={() => ( // field is not used directly, using custom handlers
                     <FormItem>
                       <FormLabel>Profile Picture</FormLabel>
                         {profileImagePreview && (
@@ -248,7 +253,7 @@ const VendorProfileSetupPage: NextPage = () => {
                 <FormField
                     control={form.control}
                     name="bannerImageFile"
-                    render={({ field }) => (
+                    render={() => ( // field is not used directly, using custom handlers
                     <FormItem>
                       <FormLabel>Banner Image</FormLabel>
                         {bannerImagePreview && (
@@ -332,8 +337,8 @@ const VendorProfileSetupPage: NextPage = () => {
 
                <div className="flex justify-end pt-4">
                 <Button type="submit" disabled={form.formState.isSubmitting}>
-                  <Save className="mr-2 h-4 w-4" /> 
                   {form.formState.isSubmitting ? 'Saving...' : 'Save Profile'}
+                  <Save className="ml-2 h-4 w-4" /> 
                 </Button>
               </div>
             </form>
@@ -345,3 +350,4 @@ const VendorProfileSetupPage: NextPage = () => {
 };
 
 export default VendorProfileSetupPage;
+
