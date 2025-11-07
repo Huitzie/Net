@@ -1,8 +1,8 @@
 
 "use client";
 import type { NextPage } from 'next';
-import { useUser, useFirestore, useDoc, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
-import { doc, deleteDoc } from 'firebase/firestore';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { RefreshCw, Trash2, ShieldExclamation } from 'lucide-react';
@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useRouter } from 'next/navigation';
 import type { User as UserType } from '@/types';
+import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const TermsPage: NextPage = () => {
   const { user, isUserLoading } = useUser();
