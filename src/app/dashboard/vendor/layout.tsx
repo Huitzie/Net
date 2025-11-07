@@ -52,9 +52,11 @@ export default function VendorDashboardLayout({
         <p className="mt-2 max-w-md text-muted-foreground">
           To get started and list your services, you need to create your public vendor profile.
         </p>
-        <Button asChild className="mt-6">
-          <Link href="/dashboard/vendor/profile">Create Your Profile</Link>
-        </Button>
+        <Link href="/dashboard/vendor/profile" passHref legacyBehavior>
+            <Button asChild className="mt-6">
+              <a>Create Your Profile</a>
+            </Button>
+        </Link>
       </div>
     );
   }
