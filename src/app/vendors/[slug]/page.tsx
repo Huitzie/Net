@@ -226,3 +226,5 @@ const VendorPage: NextPage = () => {
 };
 
 export default VendorPage;
+
+    
