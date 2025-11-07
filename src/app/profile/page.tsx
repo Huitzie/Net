@@ -2,16 +2,16 @@
 "use client";
 import type { NextPage } from 'next';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, deleteDoc } from 'firebase/firestore';
+import { doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Edit3, Mail, UserCircle2, Shield, RefreshCw, Trash2, KeyRound, Inbox } from 'lucide-react';
+import { Edit3, Mail, UserCircle2, Shield, RefreshCw, Trash2, KeyRound, Inbox, Save } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/firebase';
-import { sendPasswordResetEmail, deleteUser } from 'firebase/auth';
+import { sendPasswordResetEmail, deleteUser, updateProfile } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -25,6 +25,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useRouter } from 'next/navigation';
+import React, { useState } from 'react';
+import Image from 'next/image';
+import { uploadFile } from '@/firebase/storage';
 
 
 const UserProfilePage: NextPage = () => {
@@ -34,6 +37,10 @@ const UserProfilePage: NextPage = () => {
   const { toast } = useToast();
   const router = useRouter();
 
+  const [newProfileImage, setNewProfileImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
   const userProfileRef = useMemoFirebase(() => {
       if (!firestore || !user?.uid) return null;
       return doc(firestore, 'users', user.uid);
@@ -42,6 +49,52 @@ const UserProfilePage: NextPage = () => {
   const {data: userProfile, isLoading: isProfileLoading} = useDoc<{accountType: 'client' | 'vendor'}>(userProfileRef);
   
   const isLoading = isUserLoading || isProfileLoading;
+  
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setNewProfileImage(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleProfilePictureUpdate = async () => {
+    if (!newProfileImage || !user) return;
+
+    setIsUploading(true);
+    try {
+      const path = `users/${user.uid}/profile-image-${newProfileImage.name}`;
+      const downloadURL = await uploadFile(newProfileImage, path);
+
+      // Update Firebase Auth user profile
+      await updateProfile(user, { photoURL: downloadURL });
+      
+      // Also update the vendor profile if they have one
+      if (userProfile?.accountType === 'vendor') {
+        const vendorDocRef = doc(firestore, 'vendors', user.uid);
+        await updateDoc(vendorDocRef, { profileImage: downloadURL });
+      }
+
+      toast({
+        title: "Profile Picture Updated",
+        description: "Your new profile picture has been saved.",
+      });
+      
+      setNewProfileImage(null);
+      setImagePreview(null);
+      // The onAuthStateChanged listener will pick up the change and re-render with the new user object
+    } catch (error: any) {
+      console.error("Error updating profile picture:", error);
+      toast({
+        title: "Upload Failed",
+        description: error.message || "Could not update your profile picture.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
 
   const handlePasswordReset = async () => {
     if (!user?.email) {
@@ -138,16 +191,30 @@ const UserProfilePage: NextPage = () => {
 
       <Card className="w-full max-w-2xl mx-auto shadow-lg">
         <CardHeader className="items-center text-center">
-           <Avatar className="w-24 h-24 mb-4 ring-4 ring-primary ring-offset-2 ring-offset-background">
-            <AvatarImage src={user.photoURL ?? `https://avatar.vercel.sh/${user.displayName || user.email}.png?size=128`} alt={user.displayName || ""} />
-            <AvatarFallback className="text-3xl">{user.displayName?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase()}</AvatarFallback>
-          </Avatar>
+           <div className="relative">
+             <Avatar className="w-24 h-24 mb-4 ring-4 ring-primary ring-offset-2 ring-offset-background">
+              <AvatarImage src={imagePreview ?? user.photoURL ?? `https://avatar.vercel.sh/${user.displayName || user.email}.png?size=128`} alt={user.displayName || ""} />
+              <AvatarFallback className="text-3xl">{user.displayName?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase()}</AvatarFallback>
+            </Avatar>
+            <Label htmlFor="profile-picture-upload" className="absolute -bottom-2 -right-2 cursor-pointer bg-secondary text-secondary-foreground rounded-full p-2 hover:bg-accent transition-colors">
+                <Edit3 className="h-4 w-4" />
+                <Input id="profile-picture-upload" type="file" className="sr-only" accept="image/*" onChange={handleImageChange} />
+            </Label>
+           </div>
           <CardTitle className="text-2xl">{user.displayName || "User"}</CardTitle>
           <CardDescription className="capitalize flex items-center justify-center">
             <Shield className="h-4 w-4 mr-1.5 text-primary" /> {accountType} Account
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+            {imagePreview && (
+                <div className="flex flex-col items-center gap-4 p-4 border bg-muted/50 rounded-lg">
+                    <p className="text-sm font-medium">New profile picture selected. Click save to apply.</p>
+                    <Button onClick={handleProfilePictureUpdate} disabled={isUploading}>
+                        {isUploading ? <><RefreshCw className="mr-2 h-4 w-4 animate-spin"/> Saving...</> : <><Save className="mr-2 h-4 w-4" /> Save Picture</>}
+                    </Button>
+                </div>
+            )}
           <div className="space-y-2">
             <Label htmlFor="name" className="flex items-center"><UserCircle2 className="h-4 w-4 mr-2 text-muted-foreground" /> Name</Label>
             <Input id="name" value={user.displayName || ""} readOnly disabled />
