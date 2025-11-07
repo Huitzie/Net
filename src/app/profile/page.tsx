@@ -1,30 +1,27 @@
 
 "use client";
 import type { NextPage } from 'next';
-import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
-import { doc, deleteDoc, updateDoc, collection, query, where, serverTimestamp, arrayUnion } from 'firebase/firestore';
+import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { doc, updateDoc, collection, query, where, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Edit3, Mail, UserCircle2, Shield, RefreshCw, Trash2, KeyRound, Save, CalendarPlus, PlusCircle, Inbox } from 'lucide-react';
+import { Edit3, Mail, UserCircle2, Shield, RefreshCw, KeyRound, Save, CalendarPlus, PlusCircle, Inbox } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/firebase';
-import { sendPasswordResetEmail, deleteUser, updateProfile } from 'firebase/auth';
+import { sendPasswordResetEmail, updateProfile } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { useRouter } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
@@ -127,25 +124,6 @@ const UserProfilePage: NextPage = () => {
       toast({ title: "Password Reset Failed", description: error.message, variant: "destructive" });
     }
   };
-
-  const handleDeleteAccount = async () => {
-    if (!user || !userProfileRef || !firestore) return;
-    try {
-      // If user is a vendor, delete their public profile first
-      if (userProfile?.accountType === 'vendor') {
-        const vendorDocRef = doc(firestore, 'vendors', user.uid);
-        await deleteDocumentNonBlocking(vendorDocRef);
-      }
-      // Delete their private user document
-      await deleteDocumentNonBlocking(userProfileRef);
-      // Finally, delete the auth user
-      await deleteUser(user);
-      toast({ title: "Account Deleted", description: "Your account has been permanently deleted." });
-      router.push('/');
-    } catch (error: any) {
-       toast({ title: "Deletion Failed", description: "This is a sensitive operation. Please try again or contact support.", variant: "destructive" });
-    }
-  };
   
   const handleCreateEvent = () => {
     if (!newEventName.trim() || !user || !eventsCollectionRef) return;
@@ -231,33 +209,9 @@ const UserProfilePage: NextPage = () => {
                 
                 <div className="pt-4 border-t">
                     <h3 className="text-lg font-semibold mb-2">Account Settings</h3>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                    <Button variant="outline" onClick={handlePasswordReset}>
+                     <Button variant="outline" onClick={handlePasswordReset}>
                         <KeyRound className="mr-2 h-4 w-4" /> Change Password
                     </Button>
-                    <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                            <Button variant="destructive">
-                                <Trash2 className="mr-2 h-4 w-4" /> Delete Account
-                            </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    This action cannot be undone. This will permanently delete your account
-                                    and remove all your data from our servers.
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleDeleteAccount} className="bg-destructive hover:bg-destructive/90">
-                                    Yes, Delete My Account
-                                </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
-                    </div>
                 </div>
                 </CardContent>
             </Card>
@@ -385,5 +339,3 @@ const UserProfilePage: NextPage = () => {
 };
 
 export default UserProfilePage;
-
-    
