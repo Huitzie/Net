@@ -321,3 +321,5 @@ const MyFavsPage: NextPage = () => {
 };
 
 export default MyFavsPage;
+
+    

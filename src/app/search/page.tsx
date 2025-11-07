@@ -15,7 +15,6 @@ import { useSearchParams } from 'next/navigation';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, getDocs, limit, startAfter, DocumentData, Query } from 'firebase/firestore';
 import type { Vendor } from '@/types';
-import { mockVendors } from '@/data/mock-vendors';
 
 
 const VENDOR_PAGE_SIZE = 20;
@@ -47,20 +46,13 @@ const SearchResults = () => {
   }, [firestore, state, city, categoryId]);
 
   useEffect(() => {
-    // Show mock vendors immediately for the specified search criteria if applicable
-    const relevantMockVendors = mockVendors.filter(v => 
-        (!state || v.state === state) && 
-        (!city || v.city === city) &&
-        (!categoryId || (v.categoryIds && v.categoryIds.includes(categoryId)))
-    );
-    setVendors(relevantMockVendors);
-
-
     if (!initialQuery) {
         setIsLoading(false);
         setHasMore(false);
+        setVendors([]);
         return;
     };
+
     setIsLoading(true);
     setLastVisible(null);
     setHasMore(true);
@@ -75,17 +67,7 @@ const SearchResults = () => {
 
         const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
         setLastVisible(lastDoc);
-        
-        setVendors(prevMocks => {
-            const combined = [...prevMocks];
-            fetchedVendors.forEach(fetched => {
-                if (!combined.some(v => v.id === fetched.id)) {
-                    combined.push(fetched);
-                }
-            });
-            return combined;
-        });
-
+        setVendors(fetchedVendors);
         setHasMore(fetchedVendors.length === VENDOR_PAGE_SIZE);
 
       } catch (error) {
@@ -112,7 +94,7 @@ const SearchResults = () => {
       
       const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
       setLastVisible(lastDoc);
-      setVendors(prev => [...prev, ...newVendors.filter(v => !prev.some(pv => pv.id === v.id))]);
+      setVendors(prev => [...prev, ...newVendors]);
       setHasMore(newVendors.length === VENDOR_PAGE_SIZE);
     } catch (error) {
         console.error("Error fetching more vendors:", error);
@@ -285,3 +267,5 @@ const LoadingSpinner = () => (
 
 
 export default SearchPage;
+
+    
