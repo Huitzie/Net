@@ -30,7 +30,7 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { uploadFile } from '@/firebase/storage';
 import { formatDistanceToNow } from 'date-fns';
-import type { Conversation, Event } from '@/types';
+import type { Conversation, Event, Booking } from '@/types';
 
 
 const UserProfilePage: NextPage = () => {
@@ -60,15 +60,22 @@ const UserProfilePage: NextPage = () => {
   }, [firestore, user?.uid]);
   const { data: conversations, isLoading: areConversationsLoading } = useCollection<Conversation>(conversationsQuery);
   
-  // Events (Collections) Data
+  // Events (Client Collections) Data
   const eventsCollectionRef = useMemoFirebase(() => {
-    if (!firestore || !user?.uid) return null;
+    if (!firestore || !user?.uid || userProfile?.accountType !== 'client') return null;
     return collection(firestore, 'users', user.uid, 'events');
-  }, [firestore, user?.uid]);
+  }, [firestore, user?.uid, userProfile?.accountType]);
   const { data: events, isLoading: areEventsLoading } = useCollection<Event>(eventsCollectionRef);
 
+  // Bookings (Vendor Events) Data
+  const bookingsQuery = useMemoFirebase(() => {
+    if (!firestore || !user?.uid || userProfile?.accountType !== 'vendor') return null;
+    return query(collection(firestore, 'bookings'), where('vendorId', '==', user.uid));
+  }, [firestore, user?.uid, userProfile?.accountType]);
+  const { data: bookings, isLoading: areBookingsLoading } = useCollection<Booking>(bookingsQuery);
 
-  const isLoading = isUserLoading || isProfileLoading || areConversationsLoading || areEventsLoading;
+
+  const isLoading = isUserLoading || isProfileLoading || areConversationsLoading || areEventsLoading || areBookingsLoading;
   
   useEffect(() => {
     if (!isLoading && !user) {
@@ -85,16 +92,21 @@ const UserProfilePage: NextPage = () => {
   };
 
   const handleProfilePictureUpdate = async () => {
-    if (!newProfileImage || !user) return;
+    if (!newProfileImage || !user || !firestore) return;
     setIsUploading(true);
     try {
       const path = `users/${user.uid}/profile-image-${newProfileImage.name}`;
       const downloadURL = await uploadFile(newProfileImage, path);
+      
+      // Update Auth profile
       await updateProfile(user, { photoURL: downloadURL });
+
+      // If user is a vendor, update their public vendor profile image as well
       if (userProfile?.accountType === 'vendor') {
         const vendorDocRef = doc(firestore, 'vendors', user.uid);
         await updateDoc(vendorDocRef, { profileImage: downloadURL });
       }
+
       toast({ title: "Profile Picture Updated", description: "Your new profile picture has been saved." });
       setNewProfileImage(null);
       setImagePreview(null);
@@ -117,18 +129,21 @@ const UserProfilePage: NextPage = () => {
   };
 
   const handleDeleteAccount = async () => {
-    if (!user || !userProfileRef) return;
+    if (!user || !userProfileRef || !firestore) return;
     try {
+      // If user is a vendor, delete their public profile first
       if (userProfile?.accountType === 'vendor') {
         const vendorDocRef = doc(firestore, 'vendors', user.uid);
         await deleteDocumentNonBlocking(vendorDocRef);
       }
+      // Delete their private user document
       await deleteDocumentNonBlocking(userProfileRef);
+      // Finally, delete the auth user
       await deleteUser(user);
       toast({ title: "Account Deleted", description: "Your account has been permanently deleted." });
       router.push('/');
     } catch (error: any) {
-       toast({ title: "Deletion Failed", description: error.message, variant: "destructive" });
+       toast({ title: "Deletion Failed", description: "This is a sensitive operation. Please try again or contact support.", variant: "destructive" });
     }
   };
   
@@ -247,96 +262,127 @@ const UserProfilePage: NextPage = () => {
             </Card>
           </div>
 
-        {/* Right Column: Inbox & Events */}
-        {accountType === 'client' && (
-            <div className="lg:col-span-2 space-y-8">
-                {/* Inbox Section */}
-                <Card className="shadow-lg">
-                    <CardHeader>
-                        <CardTitle className="text-2xl flex items-center"><Inbox className="mr-3 text-primary"/>My Inbox</CardTitle>
-                        <CardDescription>Your communications with vendors.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        {conversations && conversations.length > 0 ? (
-                            <div className="space-y-4">
-                                {conversations.map(convo => (
-                                    <Link href={`/inbox/${convo.id}`} key={convo.id} legacyBehavior>
-                                    <a className="block p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors cursor-pointer">
-                                        <div className="flex items-center space-x-4">
-                                            <Avatar className="h-12 w-12 border">
-                                                <AvatarImage src={`https://avatar.vercel.sh/${convo.participantIds.find(p => p !== user.uid)}.png?size=48`} data-ai-hint="vendor avatar" />
-                                                <AvatarFallback>{convo.participantIds.find(p => p !== user.uid)?.charAt(0).toUpperCase()}</AvatarFallback>
-                                            </Avatar>
-                                            <div className="flex-grow">
-                                                <div className="flex justify-between items-center">
-                                                    <p className="font-semibold text-lg">Vendor</p>
-                                                    {convo.lastMessageTimestamp && (
-                                                        <p className="text-xs text-muted-foreground">
-                                                            {formatDistanceToNow(convo.lastMessageTimestamp.toDate(), { addSuffix: true })}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                                <p className="text-sm text-muted-foreground truncate">{convo.lastMessage || 'No messages yet...'}</p>
+        {/* Right Column: Inbox & Events/Bookings */}
+        <div className="lg:col-span-2 space-y-8">
+            {/* Inbox Section */}
+            <Card className="shadow-lg">
+                <CardHeader>
+                    <CardTitle className="text-2xl flex items-center"><Inbox className="mr-3 text-primary"/>My Inbox</CardTitle>
+                    <CardDescription>Your communications with {accountType === 'client' ? 'vendors' : 'clients'}.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {conversations && conversations.length > 0 ? (
+                        <div className="space-y-4">
+                            {conversations.slice(0, 5).map(convo => (
+                                <Link href={`/inbox/${convo.id}`} key={convo.id} legacyBehavior>
+                                <a className="block p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors cursor-pointer">
+                                    <div className="flex items-center space-x-4">
+                                        <Avatar className="h-12 w-12 border">
+                                            <AvatarImage src={`https://avatar.vercel.sh/${convo.participantIds.find(p => p !== user.uid)}.png?size=48`} data-ai-hint="user avatar" />
+                                            <AvatarFallback>{convo.participantIds.find(p => p !== user.uid)?.charAt(0).toUpperCase()}</AvatarFallback>
+                                        </Avatar>
+                                        <div className="flex-grow">
+                                            <div className="flex justify-between items-center">
+                                                <p className="font-semibold text-lg">{accountType === 'client' ? 'Vendor' : 'Client'}</p>
+                                                {convo.lastMessageTimestamp && (
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {formatDistanceToNow(convo.lastMessageTimestamp.toDate(), { addSuffix: true })}
+                                                    </p>
+                                                )}
                                             </div>
+                                            <p className="text-sm text-muted-foreground truncate">{convo.lastMessage || 'No messages yet...'}</p>
                                         </div>
-                                    </a>
-                                    </Link>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="text-center py-12 border-2 border-dashed rounded-lg">
-                                <p className="text-muted-foreground">Your inbox is empty.</p>
-                                <p className="text-sm text-muted-foreground mt-1">Start a conversation with a vendor to see it here.</p>
-                                <Button asChild variant="outline" className="mt-6"><Link href="/search">Find Vendors to Message</Link></Button>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
-
-                {/* Event Collections Section */}
-                <Card className="shadow-lg">
-                    <CardHeader>
-                        <div className="flex justify-between items-center">
-                            <CardTitle className="text-2xl flex items-center"><CalendarPlus className="mr-3 text-primary"/>My Event Collections</CardTitle>
-                            <Dialog open={isEventDialogOpen} onOpenChange={setIsEventDialogOpen}>
-                            <DialogTrigger asChild><Button><PlusCircle className="mr-2" />Create Event</Button></DialogTrigger>
-                            <DialogContent className="sm:max-w-[425px]">
-                                <DialogHeader><DialogTitle>Create a New Event</DialogTitle><DialogDescription>Give your new event collection a name.</DialogDescription></DialogHeader>
-                                <div className="grid gap-4 py-4">
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="name" className="text-right">Name</Label>
-                                    <Input id="name" value={newEventName} onChange={(e) => setNewEventName(e.target.value)} className="col-span-3" placeholder="e.g., My Wedding, Summer Party" onKeyDown={(e) => e.key === 'Enter' && handleCreateEvent()}/>
-                                </div>
-                                </div>
-                                <DialogFooter><Button type="button" onClick={handleCreateEvent} disabled={!newEventName.trim()}>Save Event</Button></DialogFooter>
-                            </DialogContent>
-                            </Dialog>
+                                    </div>
+                                </a>
+                                </Link>
+                            ))}
+                            {conversations.length > 5 && (
+                               <Button asChild variant="outline" className="w-full mt-4"><Link href="/inbox">View All Messages</Link></Button>
+                            )}
                         </div>
-                        <CardDescription>Organize your favorite vendors into collections for your events.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        {events && events.length > 0 ? (
-                            <div className="space-y-2">
-                                {events.map(event => (
-                                    <Card key={event.id} className="p-3 bg-muted/50 flex justify-between items-center">
-                                        <div>
-                                            <p className="font-semibold">{event.name}</p>
-                                            <p className="text-sm text-muted-foreground">{event.favoritedVendorServiceIds?.length || 0} vendors saved</p>
-                                        </div>
-                                        <Button variant="outline" size="sm" asChild><Link href={`/my-favs`}>Manage</Link></Button>
-                                    </Card>
-                                ))}
+                    ) : (
+                        <div className="text-center py-12 border-2 border-dashed rounded-lg">
+                            <p className="text-muted-foreground">Your inbox is empty.</p>
+                            <p className="text-sm text-muted-foreground mt-1">Start a conversation to see it here.</p>
+                            <Button asChild variant="outline" className="mt-6"><Link href="/search">Find Vendors to Message</Link></Button>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
+            {/* Event Collections (Client) or Bookings (Vendor) Section */}
+            <Card className="shadow-lg">
+                {accountType === 'client' ? (
+                     <>
+                        <CardHeader>
+                            <div className="flex justify-between items-center">
+                                <CardTitle className="text-2xl flex items-center"><CalendarPlus className="mr-3 text-primary"/>My Event Collections</CardTitle>
+                                <Dialog open={isEventDialogOpen} onOpenChange={setIsEventDialogOpen}>
+                                <DialogTrigger asChild><Button><PlusCircle className="mr-2" />Create Event</Button></DialogTrigger>
+                                <DialogContent className="sm:max-w-[425px]">
+                                    <DialogHeader><DialogTitle>Create a New Event</DialogTitle><DialogDescription>Give your new event collection a name.</DialogDescription></DialogHeader>
+                                    <div className="grid gap-4 py-4">
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="name" className="text-right">Name</Label>
+                                        <Input id="name" value={newEventName} onChange={(e) => setNewEventName(e.target.value)} className="col-span-3" placeholder="e.g., My Wedding, Summer Party" onKeyDown={(e) => e.key === 'Enter' && handleCreateEvent()}/>
+                                    </div>
+                                    </div>
+                                    <DialogFooter><Button type="button" onClick={handleCreateEvent} disabled={!newEventName.trim()}>Save Event</Button></DialogFooter>
+                                </DialogContent>
+                                </Dialog>
                             </div>
-                        ) : (
-                            <p className="text-muted-foreground text-center py-6">You haven't created any events yet.</p>
-                        )}
-                    </CardContent>
-                </Card>
-            </div>
-        )}
+                            <CardDescription>Organize your favorite vendors into collections for your events.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            {events && events.length > 0 ? (
+                                <div className="space-y-2">
+                                    {events.map(event => (
+                                        <Card key={event.id} className="p-3 bg-muted/50 flex justify-between items-center">
+                                            <div>
+                                                <p className="font-semibold">{event.name}</p>
+                                                <p className="text-sm text-muted-foreground">{event.favoritedVendorServiceIds?.length || 0} vendors saved</p>
+                                            </div>
+                                            <Button variant="outline" size="sm" asChild><Link href={`/my-favs`}>Manage</Link></Button>
+                                        </Card>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-muted-foreground text-center py-6">You haven't created any events yet.</p>
+                            )}
+                        </CardContent>
+                    </>
+                ) : (
+                    <>
+                        <CardHeader>
+                           <CardTitle className="text-2xl flex items-center"><CalendarPlus className="mr-3 text-primary"/>Your Bookings</CardTitle>
+                           <CardDescription>Events you have been booked for.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            {bookings && bookings.length > 0 ? (
+                               <div className="space-y-2">
+                                    {bookings.map(booking => (
+                                        <Card key={booking.id} className="p-3 bg-muted/50 flex justify-between items-center">
+                                            <div>
+                                                <p className="font-semibold">Booking for Service: {booking.serviceId.substring(0,10)}...</p>
+                                                <p className="text-sm text-muted-foreground">Status: {booking.status}</p>
+                                            </div>
+                                            <Button variant="outline" size="sm">Manage</Button>
+                                        </Card>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-muted-foreground text-center py-6">You have no active bookings.</p>
+                            )}
+                        </CardContent>
+                    </>
+                )}
+            </Card>
+        </div>
       </div>
     </div>
   );
 };
 
 export default UserProfilePage;
+
+    
