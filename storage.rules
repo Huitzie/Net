@@ -4,20 +4,18 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     
-    // Allow users to upload their own profile picture
+    // Allow authenticated users to read and write to their own user-specific directories.
+    // This covers profile pictures and other user-specific uploads.
     match /users/{userId}/{allPaths=**} {
-      allow read; // Allow public read for profile images
+      allow read; // Public read access for profile images.
       allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Allow vendors to upload images to their own directory.
-    // The path is structured as 'vendors/{userId}/{...}'
-    // e.g., 'vendors/uid123/profile.jpg' or 'vendors/uid123/services/service456/image.png'
+    // Allow vendors to upload and manage all files within their vendor-specific directory.
+    // This includes their main profile/banner images and any images for their services.
     match /vendors/{userId}/{allPaths=**} {
-      allow read; // Allow public read for all images
+      allow read; // All vendor images are publicly readable.
       allow write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
-
-    
