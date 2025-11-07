@@ -1,7 +1,7 @@
 
 "use client";
 import type { NextPage } from 'next';
-import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { doc, deleteDoc, updateDoc, collection, query, where, serverTimestamp, arrayUnion } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useRouter } from 'next/navigation';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { uploadFile } from '@/firebase/storage';
 import { formatDistanceToNow } from 'date-fns';
@@ -70,6 +70,12 @@ const UserProfilePage: NextPage = () => {
 
   const isLoading = isUserLoading || isProfileLoading || areConversationsLoading || areEventsLoading;
   
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.replace('/login');
+    }
+  }, [isLoading, user, router]);
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -115,9 +121,9 @@ const UserProfilePage: NextPage = () => {
     try {
       if (userProfile?.accountType === 'vendor') {
         const vendorDocRef = doc(firestore, 'vendors', user.uid);
-        await deleteDoc(vendorDocRef);
+        await deleteDocumentNonBlocking(vendorDocRef);
       }
-      await deleteDoc(userProfileRef);
+      await deleteDocumentNonBlocking(userProfileRef);
       await deleteUser(user);
       toast({ title: "Account Deleted", description: "Your account has been permanently deleted." });
       router.push('/');
@@ -143,7 +149,7 @@ const UserProfilePage: NextPage = () => {
   };
 
 
-  if (isLoading) {
+  if (isLoading || !user) {
     return (
         <div className="container mx-auto py-8 px-4 md:px-6">
           <div className="flex justify-center items-center min-h-[60vh]">
@@ -152,11 +158,6 @@ const UserProfilePage: NextPage = () => {
           </div>
         </div>
       );
-  }
-
-  if (!user) {
-    router.replace('/login');
-    return null;
   }
 
   const accountType = userProfile?.accountType;
