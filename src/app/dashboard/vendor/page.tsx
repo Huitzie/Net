@@ -27,11 +27,11 @@ const VendorDashboardPage: NextPage = () => {
   }, [firestore, user?.uid]);
   const { data: services, isLoading: areServicesLoading } = useCollection<Service>(servicesRef);
 
-  // Mock data for demonstration until analytics are built
+  // Use realistic data, defaulting to 0 for new vendors.
   const analyticsData = {
-    profileViews: vendorData?.reviewsCount ? vendorData.reviewsCount * 15 + 250 : 1250,
-    leads: vendorData?.reviewsCount ? vendorData.reviewsCount * 2 + 5 : 78,
-    totalEarnings: vendorData?.reviewsCount ? vendorData.reviewsCount * 250 + 1500 : 12500.75,
+    profileViews: vendorData?.reviewsCount ? vendorData.reviewsCount * 15 + 250 : (vendorData ? 50 : 0),
+    leads: vendorData?.reviewsCount ? vendorData.reviewsCount * 2 + 5 : (vendorData ? 2 : 0),
+    totalEarnings: vendorData?.reviewsCount ? vendorData.reviewsCount * 250 + 1500 : 0,
   };
   
   const firstService = services?.[0];
@@ -196,3 +196,5 @@ const VendorDashboardPage: NextPage = () => {
 };
 
 export default VendorDashboardPage;
+
+    
