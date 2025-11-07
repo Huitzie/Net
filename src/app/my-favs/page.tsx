@@ -1,18 +1,19 @@
 
 "use client";
 import type { NextPage } from 'next';
-import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
-import { doc, getDoc, arrayRemove, collection } from 'firebase/firestore';
+import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { doc, getDoc, arrayRemove, collection, serverTimestamp, arrayUnion } from 'firebase/firestore';
 import type { Vendor, Service, ClientProfile, Event } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { HeartOff, ShoppingBag, Trash2, PlusCircle, CalendarPlus, X } from 'lucide-react';
+import { HeartOff, ShoppingBag, Trash2, PlusCircle, CalendarPlus, X, Plus } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { Separator } from '@/components/ui/separator';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,6 +25,17 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose
+} from "@/components/ui/dialog";
+import { Label } from '@/components/ui/label';
 
 interface FavoriteDetail {
   vendor: Vendor;
@@ -37,6 +49,7 @@ const MyFavsPage: NextPage = () => {
   const [favoritesDetails, setFavoritesDetails] = useState<FavoriteDetail[]>([]);
   const [isLoadingDetails, setIsLoadingDetails] = useState(true);
   const [newEventName, setNewEventName] = useState('');
+  const [isEventDialogOpen, setIsEventDialogOpen] = useState(false);
 
   const clientProfileRef = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
@@ -108,13 +121,20 @@ const MyFavsPage: NextPage = () => {
 
   const handleCreateEvent = () => {
     if (!newEventName.trim() || !user || !eventsCollectionRef) return;
-    addDocumentNonBlocking(eventsCollectionRef, {
+
+    const newEventRef = doc(eventsCollectionRef);
+    const eventData: Event = {
+      id: newEventRef.id,
       name: newEventName,
       clientId: user.uid,
+      date: serverTimestamp(),
       favoritedVendorServiceIds: []
-    });
+    }
+    
+    setDocumentNonBlocking(newEventRef, eventData, {});
     toast({ title: "Event Created", description: `"${newEventName}" has been created.` });
     setNewEventName('');
+    setIsEventDialogOpen(false);
   };
 
   const groupedFavorites = favoritesDetails.reduce((acc, current) => {
@@ -157,28 +177,53 @@ const MyFavsPage: NextPage = () => {
       {/* Event Creation and Management */}
       <Card className="mb-8 shadow-lg">
         <CardHeader>
-          <CardTitle className="text-2xl flex items-center"><CalendarPlus className="mr-3 text-primary"/>My Event Collections</CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-2xl flex items-center"><CalendarPlus className="mr-3 text-primary"/>My Event Collections</CardTitle>
+             <Dialog open={isEventDialogOpen} onOpenChange={setIsEventDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <PlusCircle className="mr-2" />Create Event
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Create a New Event</DialogTitle>
+                  <DialogDescription>
+                    Give your new event collection a name. You can add vendors to it later.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="name" className="text-right">
+                      Name
+                    </Label>
+                    <Input
+                      id="name"
+                      value={newEventName}
+                      onChange={(e) => setNewEventName(e.target.value)}
+                      className="col-span-3"
+                      placeholder="e.g., My Wedding, Summer Party"
+                      onKeyDown={(e) => e.key === 'Enter' && handleCreateEvent()}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="button" onClick={handleCreateEvent} disabled={!newEventName.trim()}>Save Event</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
           <CardDescription>Organize your favorite vendors by creating collections for your events.</CardDescription>
         </CardHeader>
         <CardContent>
-           <div className="flex items-center space-x-2 mb-4">
-              <Input 
-                placeholder="e.g., My Wedding, Summer Party..." 
-                value={newEventName}
-                onChange={(e) => setNewEventName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleCreateEvent()}
-              />
-              <Button onClick={handleCreateEvent} disabled={!newEventName.trim()}>
-                <PlusCircle className="mr-2" />Create Event
-              </Button>
-            </div>
-            <Separator />
             {events && events.length > 0 ? (
-                <div className="mt-4 space-y-2">
+                <div className="space-y-2">
                     {events.map(event => (
                         <Card key={event.id} className="p-3 bg-muted/50 flex justify-between items-center">
-                            <p className="font-semibold">{event.name}</p>
-                            {/* TODO: Add logic to view/manage vendors in this event */}
+                            <div>
+                                <p className="font-semibold">{event.name}</p>
+                                <p className="text-sm text-muted-foreground">{event.favoritedVendorServiceIds?.length || 0} vendors saved</p>
+                            </div>
                             <Button variant="outline" size="sm">Manage</Button>
                         </Card>
                     ))}
@@ -250,7 +295,7 @@ const MyFavsPage: NextPage = () => {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Remove from Favorites?</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Are you sure you want to remove "{service.name}" from your favorites?
+                              Are you sure you want to remove "{service.name}" from your favorites? This will not remove it from any event collections.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -274,3 +319,5 @@ const MyFavsPage: NextPage = () => {
 };
 
 export default MyFavsPage;
+
+    
