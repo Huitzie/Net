@@ -3,7 +3,7 @@
 
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import type { Vendor } from '@/types';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -19,6 +19,7 @@ export default function VendorDashboardLayout({
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
+  const pathname = usePathname();
 
   const vendorDocRef = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
@@ -43,7 +44,9 @@ export default function VendorDashboardLayout({
     return null;
   }
   
-  if (user && !vendorProfile && router) {
+  // If user is a vendor but has no profile, prompt to create one,
+  // UNLESS they are already on the profile creation page.
+  if (user && !vendorProfile && pathname !== '/dashboard/vendor/profile') {
     // If user is a vendor but has no profile, prompt to create one
      return (
       <div className="container mx-auto flex min-h-[80vh] flex-col items-center justify-center text-center">
@@ -61,6 +64,6 @@ export default function VendorDashboardLayout({
     );
   }
 
-  // If user is logged in and has a vendor profile, show the dashboard
+  // If user is logged in and has a vendor profile (or is on the profile creation page), show the content
   return <>{children}</>;
 }
