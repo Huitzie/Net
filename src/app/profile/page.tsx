@@ -30,7 +30,7 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { uploadFile } from '@/firebase/storage';
 import { formatDistanceToNow } from 'date-fns';
-import type { Conversation, Event, Booking } from '@/types';
+import type { Conversation, Event, Booking, User as UserType } from '@/types';
 
 
 const UserProfilePage: NextPage = () => {
@@ -51,7 +51,7 @@ const UserProfilePage: NextPage = () => {
       if (!firestore || !user?.uid) return null;
       return doc(firestore, 'users', user.uid);
   }, [firestore, user?.uid]);
-  const {data: userProfile, isLoading: isProfileLoading} = useDoc<{accountType: 'client' | 'vendor'}>(userProfileRef);
+  const {data: userProfile, isLoading: isProfileLoading} = useDoc<UserType>(userProfileRef);
 
   // Conversations (Inbox) Data
   const conversationsQuery = useMemoFirebase(() => {
@@ -154,10 +154,11 @@ const UserProfilePage: NextPage = () => {
       id: newEventRef.id,
       name: newEventName,
       clientId: user.uid,
-      date: serverTimestamp(),
+      // `date` will be set by the server, so we can omit it here if using serverTimestamp
+      // date: serverTimestamp(),
       favoritedVendorServiceIds: []
     }
-    setDocumentNonBlocking(newEventRef, eventData, {});
+    setDocumentNonBlocking(newEventRef, eventData, { merge: true });
     toast({ title: "Event Created", description: `"${newEventName}" has been created.` });
     setNewEventName('');
     setIsEventDialogOpen(false);
@@ -286,7 +287,7 @@ const UserProfilePage: NextPage = () => {
                                                 <p className="font-semibold text-lg">{accountType === 'client' ? 'Vendor' : 'Client'}</p>
                                                 {convo.lastMessageTimestamp && (
                                                     <p className="text-xs text-muted-foreground">
-                                                        {formatDistanceToNow(convo.lastMessageTimestamp.toDate(), { addSuffix: true })}
+                                                        {formatDistanceToNow(new Date(convo.lastMessageTimestamp.seconds * 1000), { addSuffix: true })}
                                                     </p>
                                                 )}
                                             </div>
@@ -363,10 +364,10 @@ const UserProfilePage: NextPage = () => {
                                     {bookings.map(booking => (
                                         <Card key={booking.id} className="p-3 bg-muted/50 flex justify-between items-center">
                                             <div>
-                                                <p className="font-semibold">Booking for Service: {booking.serviceId.substring(0,10)}...</p>
-                                                <p className="text-sm text-muted-foreground">Status: {booking.status}</p>
+                                                <p className="font-semibold">Booking from Client ID: {booking.clientId.substring(0,10)}...</p>
+                                                <p className="text-sm text-muted-foreground">Status: <span className="capitalize font-medium">{booking.status.replace(/_/g, ' ')}</span></p>
                                             </div>
-                                            <Button variant="outline" size="sm">Manage</Button>
+                                            <Button variant="outline" size="sm" asChild><Link href="/dashboard/vendor">Manage</Link></Button>
                                         </Card>
                                     ))}
                                 </div>
@@ -384,5 +385,3 @@ const UserProfilePage: NextPage = () => {
 };
 
 export default UserProfilePage;
-
-    
