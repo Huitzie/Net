@@ -3,16 +3,18 @@
 
 import type { NextPage } from 'next';
 import Link from 'next/link';
-import { useState, useRef, useEffect, use } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ArrowLeft, Bot, Send, RefreshCw, Clipboard, Check } from 'lucide-react';
-import { useUser } from '@/firebase';
-import { generateContract } from '@/ai/flows/contract-flow';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import { generateContract, type ContractInput } from '@/ai/flows/contract-flow';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
+import type { Service } from '@/types';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -21,12 +23,20 @@ interface Message {
 
 const ContractsAIPage: NextPage = () => {
   const { user } = useUser();
+  const firestore = useFirestore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  const servicesCollectionRef = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return collection(firestore, 'vendors', user.uid, 'services');
+  }, [firestore, user?.uid]);
+
+  const { data: services, isLoading: areServicesLoading } = useCollection<Service>(servicesCollectionRef);
 
   useEffect(() => {
     // Start with a greeting from the assistant
@@ -61,7 +71,12 @@ const ContractsAIPage: NextPage = () => {
     scrollToBottom();
 
     try {
-      const response = await generateContract(input, messages);
+      const contractInput: ContractInput = {
+        prompt: input,
+        history: messages,
+        services: services || [],
+      };
+      const response = await generateContract(contractInput);
       const assistantMessage: Message = { role: 'assistant', content: response };
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
@@ -152,9 +167,10 @@ const ContractsAIPage: NextPage = () => {
                     <Textarea
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        placeholder="Provide details for the contract..."
+                        placeholder={areServicesLoading ? "Loading your services..." : "Provide details for the contract..."}
                         className="flex-1 resize-none"
                         rows={1}
+                        disabled={areServicesLoading}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey) {
                                 e.preventDefault();
@@ -162,7 +178,7 @@ const ContractsAIPage: NextPage = () => {
                             }
                         }}
                     />
-                    <Button type="submit" disabled={isLoading || !input.trim()}>
+                    <Button type="submit" disabled={isLoading || !input.trim() || areServicesLoading}>
                         <Send className="h-5 w-5"/>
                         <span className="sr-only">Send</span>
                     </Button>
