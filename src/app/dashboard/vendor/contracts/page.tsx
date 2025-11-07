@@ -43,7 +43,7 @@ const ContractsAIPage: NextPage = () => {
     setMessages([
       {
         role: 'assistant',
-        content: "Hello! I'm here to help you draft a professional service agreement. To get started, please tell me about the service you're providing, the client's name, the dates, and the payment terms.",
+        content: "Hello! I'm here to help you draft a professional service agreement. I can assist you in English, Spanish, and several other languages. What language shall we use today?",
       },
     ]);
   }, []);
@@ -138,7 +138,7 @@ const ContractsAIPage: NextPage = () => {
                     )}
                     <div className={`max-w-lg rounded-xl px-4 py-3 shadow ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
                         <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                        {message.content.includes('SERVICE AGREEMENT') && (
+                        {(message.content.includes('SERVICE AGREEMENT') || message.content.includes('ACUERDO DE SERVICIO')) && (
                              <Button size="sm" variant="ghost" className="mt-2 text-xs" onClick={() => copyToClipboard(message.content)}>
                                 {isCopied ? <Check className="mr-2"/> : <Clipboard className="mr-2"/>}
                                 Copy Contract
@@ -194,4 +194,3 @@ const ContractsAIPage: NextPage = () => {
 };
 
 export default ContractsAIPage;
-
