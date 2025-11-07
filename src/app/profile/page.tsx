@@ -343,7 +343,7 @@ const UserProfilePage: NextPage = () => {
                                                 <p className="font-semibold">{event.name}</p>
                                                 <p className="text-sm text-muted-foreground">{event.favoritedVendorServiceIds?.length || 0} vendors saved</p>
                                             </div>
-                                            <Button variant="outline" size="sm" asChild><Link href={`/my-favs`}>Manage</Link></Button>
+                                            <Button variant="outline" size="sm" asChild><Link href={`/my-favs/${event.id}`}>Manage</Link></Button>
                                         </Card>
                                     ))}
                                 </div>
@@ -385,3 +385,5 @@ const UserProfilePage: NextPage = () => {
 };
 
 export default UserProfilePage;
+
+    
