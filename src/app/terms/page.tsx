@@ -5,7 +5,7 @@ import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { RefreshCw, Trash2, ShieldExclamation } from 'lucide-react';
+import { RefreshCw, Trash2, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/firebase';
 import { deleteUser } from 'firebase/auth';
@@ -86,7 +86,7 @@ const TermsPage: NextPage = () => {
           </p>
           <Card className="bg-destructive/10 border-destructive/50 my-4">
               <CardHeader className="flex flex-row items-start space-x-4 pb-4">
-                  <ShieldExclamation className="h-6 w-6 text-destructive mt-1"/>
+                  <ShieldAlert className="h-6 w-6 text-destructive mt-1"/>
                   <div>
                     <CardTitle className="text-destructive">Permanent Account Deletion</CardTitle>
                     <CardDescription className="text-destructive/90">
