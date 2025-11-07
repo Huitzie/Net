@@ -19,7 +19,7 @@ import type { Service } from '@/types';
 import { ArrowLeft, PlusCircle, UploadCloud, Trash2 } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { useUser, useFirestore, addDocumentNonBlocking } from '@/firebase';
+import { useUser, useFirestore, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc, updateDoc } from 'firebase/firestore';
 import { uploadFile } from '@/firebase/storage';
 
@@ -218,7 +218,7 @@ const AddNewServicePage: NextPage = () => {
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select a category for your service" />
-                        </Trigger>
+                        </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {categories.map((category) => (
