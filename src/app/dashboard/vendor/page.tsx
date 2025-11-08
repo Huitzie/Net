@@ -196,8 +196,3 @@ const VendorDashboardPage: NextPage = () => {
 };
 
 export default VendorDashboardPage;
-    
-
-    
-
-    
