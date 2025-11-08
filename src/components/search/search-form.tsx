@@ -23,7 +23,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { categories as allCategoriesList } from "@/data/categories";
 import { getCitiesByState, getStates, type City } from '@/services/geo'; 
 import { Search } from "lucide-react";
