@@ -205,6 +205,7 @@ export default function SearchForm({ initialValues }: SearchFormProps) {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
+                    <SelectItem value={ALL_CATEGORIES_VALUE}>All Categories</SelectItem>
                     {allCategoriesList.map((cat) => (
                         <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                     ))}
